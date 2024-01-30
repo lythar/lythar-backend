@@ -26,11 +26,11 @@ namespace lythar_backend.ldap
     {
         public static void CreateUser(LdapConnection connection, UserData userData)
         {
-            AddRequest newUser = new AddRequest(Format(@"cn={0},ou=Users,dc=mufaro,dc=com", userData.Username, userData.UserId));
+            AddRequest newUser = new AddRequest(Format(@"cn={0},ou=Users,dc=mufaro,dc=com", userData.Username));
                 newUser.Attributes.Add(new DirectoryAttribute("objectclass", new object[] { "inetorgPerson" }));
                 newUser.Attributes.Add(new DirectoryAttribute("givenName", userData.Username));
                 newUser.Attributes.Add(new DirectoryAttribute("sn", "user"));
-                //newUser.Attributes.Add(new DirectoryAttribute("userid", id.ToString()));
+                newUser.Attributes.Add(new DirectoryAttribute("userid", userData.UserId.ToString()));
                 newUser.Attributes.Add(new DirectoryAttribute("description", userData.Description));
                 newUser.Attributes.Add(new DirectoryAttribute("userPassword", "password"));
             try
