@@ -22,6 +22,7 @@ public class Program
         builder.Logging.AddConsole();
         builder.Services.AddMvc();
 
+        builder.Services.AddScoped<DatabaseContext>();
         builder.Services.AddScoped<LdapService>();
 
         var app = builder.Build();
