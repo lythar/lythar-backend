@@ -34,8 +34,8 @@ public class AccountController : Controller
     public class LoginForm
     {
         [Required]
-        [JsonPropertyName("username")]
-        public string Username { get; set; } = null!;
+        [JsonPropertyName("login")]
+        public string Login { get; set; } = null!;
         [Required]
         [JsonPropertyName("password")]
         public string Password { get; set; } = null!;
@@ -43,8 +43,14 @@ public class AccountController : Controller
 
     [HttpPost]
     [Route("login")]
-    public LoginResponse Login([FromBody] LoginForm loginForm)
+    public async Task<LoginResponse> Login([FromBody] LoginForm loginForm)
     {
+        var auth = LdapService.ValidateLogin(loginForm.Login, loginForm.Password);
+        var user = Models.User.FromLdap(auth.Attributes);
+
+        DatabaseContext.Users.Add(user);
+        await DatabaseContext.SaveChangesAsync();
+
         return new LoginResponse
         {
             Status = ResponseStatus.Success

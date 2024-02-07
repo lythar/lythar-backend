@@ -9,13 +9,15 @@ public static class LdapUtils
 {
     public static T First<T>(this DirectoryAttribute collection)
     {
-        var values = collection.GetValues(typeof(T));
+        var values = collection.GetValues(typeof(string));
         return values.OfType<T>().First();
     }
 
     public static T? FirstOrDefault<T>(this DirectoryAttribute collection)
     {
-        var values = collection.GetValues(typeof(T));
+        if (collection == null) return default(T?);
+
+        var values = collection.GetValues(typeof(string));
         return values.OfType<T>().FirstOrDefault();
     }
 }
@@ -84,12 +86,15 @@ public class LdapService
         return (SearchResponse)Connection.SendRequest(request);
     }
 
-    public bool ValidateLogin(string login, string password)
+    public SearchResultEntry? ValidateLogin(string login, string password)
     {
         var response = Find(string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)));
 
-        if (response == null || response.Entries.Count == 0) return false;
+        if (response == null || response.Entries.Count == 0) return null;
 
-        return ValidateDn(response.Entries[0].DistinguishedName, password);
+        var dn = response.Entries[0].DistinguishedName;
+
+        if (ValidateDn(dn, password)) return response.Entries[0];
+        else return null;
     }
 }

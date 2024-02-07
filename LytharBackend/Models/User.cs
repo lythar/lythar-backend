@@ -10,18 +10,19 @@ public class User
     public required string Name { get; set; }
     public string? LastName { get; set; }
     public string? Email { get; set; }
+    public string Password { get; set; } = string.Empty;
 
     /// <summary>
     /// Any URL that fits in HTML img src attribute, so can be a base64 blob or an actual URL
     /// </summary>
     public string? AvatarUrl { get; set; }
 
-    public static User FromLdap(SearchResultEntry entry)
+    public static User FromLdap(SearchResultAttributeCollection attr)
     {
-        var uid = entry.Attributes["uid"].FirstOrDefault<string>() ?? entry.Attributes["cn"].First<string>();
-        var givenName = entry.Attributes["givenName"].FirstOrDefault<string>() ?? uid;
-        var sn = entry.Attributes["sn"].FirstOrDefault<string>();
-        var email = entry.Attributes["mail"].FirstOrDefault<string>();
+        var uid = attr["uid"].FirstOrDefault<string>() ?? attr["cn"].First<string>();
+        var givenName = attr["givenName"].FirstOrDefault<string>() ?? uid;
+        var sn = attr["sn"].FirstOrDefault<string>();
+        var email = attr["mail"].FirstOrDefault<string>();
 
         return new User {
             Login = uid,
