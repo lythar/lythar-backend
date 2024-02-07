@@ -1,8 +1,6 @@
 ﻿using AntiLdapInjection;
-using System.DirectoryServices;
 using System.DirectoryServices.Protocols;
 using System.Net;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace LytharBackend.Ldap;
 
@@ -62,7 +60,7 @@ public class LdapService
     {
         var request = new SearchRequest(
             LdapConfig.SearchDn,
-            string.Format(LdapConfig.SearchFilter, login),
+            string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)),
             System.DirectoryServices.Protocols.SearchScope.Subtree,
             null
         );
