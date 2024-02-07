@@ -4,7 +4,7 @@ using LytharBackend.Ldap;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.OpenApi.Models;
+using System.Text.Json.Serialization;
 
 public class Program
 {
@@ -14,15 +14,17 @@ public class Program
 
         if (builder.Environment.IsDevelopment())
         {
-            builder.Services.AddSwaggerGen(c =>
+            builder.Services.AddOpenApiDocument(options =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Lythar", Version = "v1" });
+                options.Title = "Lythar";
             });
         }
         
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole();
-        builder.Services.AddMvc();
+        builder.Services.AddMvc()
+            .AddJsonOptions(options =>
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         builder.Services.AddDbContext<DatabaseContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseContext")));
@@ -34,13 +36,9 @@ public class Program
 
         if (app.Environment.IsDevelopment())
         {
-            app.UseSwagger();
-            app.UseSwaggerUI(options =>
-            {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-                options.RoutePrefix = "swagger";
-            });
-         }
+            app.UseOpenApi();
+            app.UseSwaggerUi();
+        }
 
         app.MapControllers();
 

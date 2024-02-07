@@ -4,6 +4,22 @@ using System.Net;
 
 namespace LytharBackend.Ldap;
 
+// credit to github.com/Ender-0001 for being a skidder
+public static class LdapUtils
+{
+    public static T First<T>(this DirectoryAttribute collection)
+    {
+        var values = collection.GetValues(typeof(T));
+        return values.OfType<T>().First();
+    }
+
+    public static T? FirstOrDefault<T>(this DirectoryAttribute collection)
+    {
+        var values = collection.GetValues(typeof(T));
+        return values.OfType<T>().FirstOrDefault();
+    }
+}
+
 public class LdapService
 {
     private readonly ILogger Logger;
@@ -56,17 +72,23 @@ public class LdapService
         }
     }
 
-    public bool ValidateLogin(string login, string password)
+    public SearchResponse? Find(string ldapFilter)
     {
         var request = new SearchRequest(
             LdapConfig.SearchDn,
-            string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)),
-            System.DirectoryServices.Protocols.SearchScope.Subtree,
+            ldapFilter,
+            SearchScope.Subtree,
             null
         );
-        var response = (SearchResponse)Connection.SendRequest(request);
 
-        if (response.Entries.Count == 0) return false;
+        return (SearchResponse)Connection.SendRequest(request);
+    }
+
+    public bool ValidateLogin(string login, string password)
+    {
+        var response = Find(string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)));
+
+        if (response == null || response.Entries.Count == 0) return false;
 
         return ValidateDn(response.Entries[0].DistinguishedName, password);
     }
