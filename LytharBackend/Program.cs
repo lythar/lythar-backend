@@ -2,6 +2,8 @@ namespace LytharBackend;
 
 using LytharBackend.Ldap;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.OpenApi.Models;
 
 public class Program
@@ -22,7 +24,8 @@ public class Program
         builder.Logging.AddConsole();
         builder.Services.AddMvc();
 
-        builder.Services.AddScoped<DatabaseContext>();
+        builder.Services.AddDbContext<DatabaseContext>(options =>
+            options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseContext")));
         builder.Services.AddScoped<LdapService>();
 
         var app = builder.Build();
@@ -37,7 +40,7 @@ public class Program
                 options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
                 options.RoutePrefix = "swagger";
             });
-        }
+         }
 
         app.MapControllers();
 

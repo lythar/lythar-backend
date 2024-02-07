@@ -17,7 +17,6 @@ public class ExampleController : Controller
     [Route("")]
     public string Index()
     {
-        LdapService.Test();
-        return "Hello, World!";
+        return LdapService.ValidateLogin("wkijek", "54321") ? "true" : "false";
     }
 }

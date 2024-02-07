@@ -3,7 +3,7 @@
 public class User
 {
     public int Id { get; set; }
-    public required string LdapId { get; set; }
+    public required string Login { get; set; }
     public required string Name { get; set; }
     public string? LastName { get; set; }
     public string? Email { get; set; }
