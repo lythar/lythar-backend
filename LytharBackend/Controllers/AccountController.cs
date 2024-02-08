@@ -39,6 +39,8 @@ public class AccountController : Controller
         [Required]
         [JsonPropertyName("password")]
         public string Password { get; set; } = null!;
+        [JsonPropertyName("newPassword")]
+        public string? NewPassword { get; set; }
     }
 
     [HttpPost]
