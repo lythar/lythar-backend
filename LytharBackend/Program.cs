@@ -1,7 +1,9 @@
 namespace LytharBackend;
 
+using LytharBackend.Exceptons;
 using LytharBackend.Ldap;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json.Serialization;
@@ -32,6 +34,27 @@ public class Program
 
         var app = builder.Build();
 
+        app.UseExceptionHandler(options =>
+        {
+            options.Run(async context =>
+            {
+                var exception = context.Features.Get<IExceptionHandlerPathFeature>();
+
+                BaseHttpException httpException;
+
+                if (exception?.Error is BaseHttpException)
+                {
+                    httpException = (BaseHttpException)exception.Error;
+                }
+                else
+                {
+                    httpException = new BaseHttpException("InternalServerError", "Internal server error.", System.Net.HttpStatusCode.InternalServerError);
+                }
+
+                context.Response.StatusCode = (int)httpException.Options.StatusCode;
+                await context.Response.WriteAsJsonAsync(httpException.Options);
+            });
+        });
         app.UseRouting();
 
         if (app.Environment.IsDevelopment())

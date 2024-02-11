@@ -9,6 +9,6 @@ public class LdapConfig
     public string AdminDn { get; set; } = string.Empty;
     public string AdminPassword { get; set; } = string.Empty;
     public string SearchDn { get; set; } = "dc=lythar,dc=org";
-    public string SearchFilter { get; set; } = "(cn={0})";
+    public string SearchFilter { get; set; } = "(uid={0})";
     public int Timeout { get; set; } = 10;
 }

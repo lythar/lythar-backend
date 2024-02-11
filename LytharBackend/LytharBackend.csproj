@@ -1,43 +1,50 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <InvariantGlobalization>true</InvariantGlobalization>
-    <PublishAot>False</PublishAot>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-    <Platforms>AnyCPU;x64</Platforms>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<InvariantGlobalization>true</InvariantGlobalization>
+		<PublishAot>False</PublishAot>
+		<DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="AntiLdapInjection" Version="1.1.4" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
-    <PackageReference Include="Npgsql" Version="8.0.1" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
-    <PackageReference Include="NSwag.Annotations" Version="14.0.3" />
-    <PackageReference Include="NSwag.AspNetCore" Version="14.0.3" />
-    <PackageReference Include="NSwag.Core" Version="14.0.3" />
-    <PackageReference Include="NSwag.Generation.WebApi" Version="14.0.3" />
-    <PackageReference Include="System.DirectoryServices" Version="8.0.0" />
-    <PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="AntiLdapInjection" Version="1.1.4" />
+		<PackageReference Include="Isopoh.Cryptography.Argon2" Version="2.0.0" />
+		<PackageReference Include="Microsoft.AspNet.WebApi.Core" Version="5.3.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />
+		<PackageReference Include="Npgsql" Version="8.0.1" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+		<PackageReference Include="NSwag.Annotations" Version="14.0.3" />
+		<PackageReference Include="NSwag.AspNetCore" Version="14.0.3" />
+		<PackageReference Include="NSwag.Commands" Version="14.0.3" />
+		<PackageReference Include="NSwag.Core" Version="14.0.3" />
+		<PackageReference Include="NSwag.Generation.WebApi" Version="14.0.3" />
+		<PackageReference Include="NSwag.MSBuild" Version="14.0.3">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="System.DirectoryServices" Version="8.0.0" />
+		<PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
-  </ItemGroup>
+	<ItemGroup>
+		<EditorConfigFiles Remove="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
-  </ItemGroup>
+	<ItemGroup>
+		<EditorConfigFiles Remove="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Include="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
+	</ItemGroup>
 
 </Project>
