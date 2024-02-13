@@ -1,4 +1,5 @@
 ﻿using LytharBackend.Ldap;
+using Microsoft.EntityFrameworkCore;
 using System.DirectoryServices.Protocols;
 
 namespace LytharBackend.Models;
@@ -19,13 +20,13 @@ public class User
 
     public static User FromLdap(SearchResultAttributeCollection attr)
     {
-        var uid = attr["uid"].FirstOrDefault<string>() ?? attr["cn"].First<string>();
-        var givenName = attr["givenName"].FirstOrDefault<string>() ?? uid;
+        var cn = attr["cn"].FirstOrDefault<string>() ?? attr["uid"].First<string>();
+        var givenName = attr["givenName"].FirstOrDefault<string>() ?? cn;
         var sn = attr["sn"].FirstOrDefault<string>();
         var email = attr["mail"].FirstOrDefault<string>();
 
         return new User {
-            Login = uid,
+            Login = cn,
             Name = givenName,
             LastName = sn,
             Email = email

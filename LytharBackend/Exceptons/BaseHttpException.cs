@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Web.Http;
 
 namespace LytharBackend.Exceptons;
 
@@ -16,18 +15,18 @@ public class BaseHttpExceptionOptions
     }
 }
 
-public class BaseHttpException : HttpResponseException
+public class BaseHttpException : Exception
 {
     public BaseHttpExceptionOptions Options;
+    public HttpResponseMessage ResponseMessage;
 
-    public BaseHttpException(BaseHttpExceptionOptions options) : base(
-        new HttpResponseMessage((HttpStatusCode)options.StatusCode)
+    public BaseHttpException(BaseHttpExceptionOptions options) : base(options.ErrorMessage) {
+        Options = options;
+        ResponseMessage = new HttpResponseMessage((HttpStatusCode)options.StatusCode)
         {
             Content = JsonContent.Create(options),
             ReasonPhrase = options.ErrorMessage
-        }
-    ) {
-        Options = options;
+        };
     }
 
     public BaseHttpException(string code, string message, HttpStatusCode statusCode) : this(new BaseHttpExceptionOptions(code, message, statusCode)) { }

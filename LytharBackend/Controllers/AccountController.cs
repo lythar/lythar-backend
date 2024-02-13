@@ -1,6 +1,7 @@
 ﻿using Isopoh.Cryptography.Argon2;
 using LytharBackend.Exceptons;
 using LytharBackend.Ldap;
+using LytharBackend.Session;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
@@ -14,11 +15,13 @@ namespace LytharBackend.Controllers;
 public class AccountController : Controller
 {
     private LdapService LdapService;
+    private ISessionService SessionService;
     private DatabaseContext DatabaseContext;
 
-    public AccountController(LdapService ldapService, DatabaseContext databaseContext)
+    public AccountController(LdapService ldapService, ISessionService sessionService, DatabaseContext databaseContext)
     {
         LdapService = ldapService;
+        SessionService = sessionService;
         DatabaseContext = databaseContext;
     }
 
@@ -32,32 +35,25 @@ public class AccountController : Controller
     public class LoginResponse
     {
         [Required]
-        [JsonPropertyName("status")]
         public ResponseStatus Status { get; set; }
-        [JsonPropertyName("token")]
         public string? Token { get; set; }
     }
 
     public class LoginForm
     {
         [Required]
-        [JsonPropertyName("login")]
         public string Login { get; set; } = null!;
         [Required]
-        [JsonPropertyName("password")]
         public string Password { get; set; } = null!;
-    }
-
-    public class RegisterForm : LoginForm
-    {
-        [JsonPropertyName("newPassword")]
         public string? NewPassword { get; set; }
     }
 
     [HttpPost]
     [Route("login")]
     [SwaggerResponse(HttpStatusCode.OK, typeof(LoginResponse))]
+    [SwaggerResponse(HttpStatusCode.BadRequest, typeof(BaseHttpExceptionOptions))]
     [SwaggerResponse(HttpStatusCode.Unauthorized, typeof(BaseHttpExceptionOptions))]
+    [SwaggerResponse(HttpStatusCode.InternalServerError, typeof(BaseHttpExceptionOptions))]
     public async Task<LoginResponse> Login([FromBody] LoginForm loginForm)
     {
         var user = await DatabaseContext.Users.Where(x => x.Login == loginForm.Login).FirstOrDefaultAsync();
@@ -70,18 +66,39 @@ public class AccountController : Controller
             {
                 throw new InvalidLoginException();
             }
+            else if (loginForm.NewPassword == null)
+            {
+                return new LoginResponse { Status = ResponseStatus.SetNewPassword };
+            }
 
-            return new LoginResponse { Status = ResponseStatus.SetNewPassword };
+            var newUser = Models.User.FromLdap(loginAttempt.Attributes);
+
+            newUser.Password = Argon2.Hash(loginForm.NewPassword);
+
+            var newUserResult = await DatabaseContext.Users.AddAsync(newUser);
+            await DatabaseContext.SaveChangesAsync();
+
+            user = newUserResult.Entity;
         }
-
-        if (!Argon2.Verify(user.Password, loginForm.Password))
+        else if (loginForm.NewPassword != null)
+        {
+            throw new AccountExistsException(loginForm.Login);
+        }
+        else if (!Argon2.Verify(user.Password, loginForm.Password))
         {
             throw new InvalidLoginException();
         }
 
+        var token = await SessionService.CreateSession(new CreateSessionOptions
+        {
+            AccountId = user.Id.ToString(),
+            Username = user.Login
+        });
+
         return new LoginResponse
         {
-            Status = ResponseStatus.Success
+            Status = ResponseStatus.Success,
+            Token = token
         };
     }
 }

@@ -2,6 +2,7 @@ namespace LytharBackend;
 
 using LytharBackend.Exceptons;
 using LytharBackend.Ldap;
+using LytharBackend.Session;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,8 @@ public class Program
 
         builder.Services.AddDbContext<DatabaseContext>(options =>
             options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseContext")));
-        builder.Services.AddScoped<LdapService>();
+        builder.Services.AddSingleton<LdapService>();
+        builder.Services.AddSingleton<ISessionService, JwtSessionsService>();
 
         var app = builder.Build();
 
@@ -51,7 +53,7 @@ public class Program
                     httpException = new BaseHttpException("InternalServerError", "Internal server error.", System.Net.HttpStatusCode.InternalServerError);
                 }
 
-                context.Response.StatusCode = (int)httpException.Options.StatusCode;
+                context.Response.StatusCode = httpException.Options.StatusCode;
                 await context.Response.WriteAsJsonAsync(httpException.Options);
             });
         });
