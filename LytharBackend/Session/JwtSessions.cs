@@ -6,6 +6,21 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace LytharBackend.Session;
 
+public static class JwtUtils
+{
+    public static DateTime GetExpiry(this TokenValidationResult token)
+    {
+        var expiresAt = (long)token.Claims.First(x => x.Key == "exp").Value;
+        return DateTimeOffset.FromUnixTimeSeconds(expiresAt).DateTime;
+    }
+
+    public static DateTime GetCreatedAt(this TokenValidationResult token)
+    {
+        var createdAt = (long)token.Claims.First(x => x.Key == "iat").Value;
+        return DateTimeOffset.FromUnixTimeSeconds(createdAt).DateTime;
+    }
+}
+
 public class JwtSessionsService : ISessionService
 {
     private readonly IConfiguration Configuration;
@@ -84,8 +99,8 @@ public class JwtSessionsService : ISessionService
         {
             AccountId = accountId,
             Username = username,
-            ExpiresAt = DateTime.Now,
-            CreatedAt = DateTime.Now,
+            ExpiresAt = validated.GetExpiry(),
+            CreatedAt = validated.GetCreatedAt(),
             SessionId = Guid.NewGuid().ToString()
         };
     }
