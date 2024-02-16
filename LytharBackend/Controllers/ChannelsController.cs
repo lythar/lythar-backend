@@ -31,6 +31,8 @@ public class ChannelsController : Controller
     public class CreateChannelResponse
     {
         public required long ChannelId { get; set; }
+        public required string Name { get; set; }
+        public required string Description { get; set; }
     }
 
     [HttpPost]
@@ -40,7 +42,7 @@ public class ChannelsController : Controller
     {
         await SessionService.VerifyRequest(HttpContext);
 
-        // TO-DO: Check if the user is actually allowed to do it
+        // TO-DO: Check if the user is actually allowed to do it via some role system
 
         var channel = new Channel
         {
@@ -54,7 +56,9 @@ public class ChannelsController : Controller
 
         return new CreateChannelResponse
         {
-            ChannelId = instertedChannel.Entity.ChannelId
+            ChannelId = instertedChannel.Entity.ChannelId,
+            Name = instertedChannel.Entity.Name,
+            Description = instertedChannel.Entity.Description
         };
     }
 
@@ -83,6 +87,25 @@ public class ChannelsController : Controller
         }
 
         return channel;
+    }
+
+    [HttpDelete]
+    [Route("{channelId}")]
+    public async Task DeleteChannel([FromRoute] long channelId)
+    {
+        await SessionService.VerifyRequest(HttpContext);
+
+        // TO-DO: Check if the user is actually allowed to do it via some role system
+
+        var channel = await DatabaseContext.Channels.Where(x => x.ChannelId == channelId).FirstOrDefaultAsync();
+
+        if (channel == null)
+        {
+            throw new ChannelNotFoundException(channelId.ToString());
+        }
+
+        DatabaseContext.Channels.Remove(channel);
+        await DatabaseContext.SaveChangesAsync();
     }
 
     public class SendMessageForm
