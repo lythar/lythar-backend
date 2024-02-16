@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
 using System.ComponentModel.DataAnnotations;
-using System.Net;
 using System.Text.Json.Serialization;
 
 namespace LytharBackend.Controllers;
@@ -51,7 +50,7 @@ public class AccountController : Controller
 
     [HttpPost]
     [Route("login")]
-    [SwaggerResponse(HttpStatusCode.OK, typeof(LoginResponse))]
+    [SwaggerResponse(200, typeof(LoginResponse))]
     public async Task<LoginResponse> Login([FromBody] LoginForm loginForm)
     {
         var user = await DatabaseContext.Users.Where(x => x.Login == loginForm.Login).FirstOrDefaultAsync();
@@ -125,7 +124,7 @@ public class AccountController : Controller
 
     [HttpGet]
     [Route("account")]
-    [SwaggerResponse(HttpStatusCode.OK, typeof(UserAccountResponse))]
+    [SwaggerResponse(200, typeof(UserAccountResponse))]
     public async Task<UserAccountResponse> GetAccount()
     {
         var token = await SessionService.VerifyRequest(HttpContext);
@@ -148,7 +147,7 @@ public class AccountController : Controller
 
     [HttpGet]
     [Route("accounts")]
-    [SwaggerResponse(HttpStatusCode.OK, typeof(List<UserAccountResponse>))]
+    [SwaggerResponse(200, typeof(List<UserAccountResponse>))]
     public async Task<List<UserAccountResponse>> GetAccounts([FromQuery] List<int> accountIds)
     {
         await SessionService.VerifyRequest(HttpContext);
@@ -177,7 +176,7 @@ public class AccountController : Controller
 
     [HttpPatch]
     [Route("account")]
-    [SwaggerResponse(HttpStatusCode.OK, typeof(UserAccountResponse))]
+    [SwaggerResponse(200, typeof(UserAccountResponse))]
     public async Task<UserAccountResponse> UpdateAccount([FromBody] UpdateAccountForm updateAccount)
     {
         var token = await SessionService.VerifyRequest(HttpContext);

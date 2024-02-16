@@ -61,14 +61,16 @@ public class Program
         });
         app.UseWebSockets();
         app.UseRouting();
-        app.UseCors(x => x
-            .AllowAnyMethod()
-            .AllowAnyHeader()
-            .SetIsOriginAllowed(origin => true)
-            .AllowCredentials());
 
         if (app.Environment.IsDevelopment())
         {
+            app.UseCors(x => x
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetIsOriginAllowed(origin => true)
+                .AllowCredentials()
+            );
+
             app.UseOpenApi();
             app.UseSwaggerUi();
         }

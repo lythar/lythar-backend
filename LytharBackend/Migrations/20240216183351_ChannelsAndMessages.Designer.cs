@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LytharBackend.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20240216183351_ChannelsAndMessages")]
+    partial class ChannelsAndMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -66,7 +69,7 @@ namespace LytharBackend.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("EditedAt")
+                    b.Property<DateTime>("EditedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("SentAt")
@@ -124,13 +127,13 @@ namespace LytharBackend.Migrations
             modelBuilder.Entity("LytharBackend.Models.Message", b =>
                 {
                     b.HasOne("LytharBackend.Models.User", "Author")
-                        .WithMany("Messages")
+                        .WithMany()
                         .HasForeignKey("AuthorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("LytharBackend.Models.Channel", "Channel")
-                        .WithMany("Messages")
+                        .WithMany()
                         .HasForeignKey("ChannelId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -138,16 +141,6 @@ namespace LytharBackend.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Channel");
-                });
-
-            modelBuilder.Entity("LytharBackend.Models.Channel", b =>
-                {
-                    b.Navigation("Messages");
-                });
-
-            modelBuilder.Entity("LytharBackend.Models.User", b =>
-                {
-                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }
