@@ -97,7 +97,7 @@ public class JwtSessionsService : ISessionService
 
         return new SessionData
         {
-            AccountId = accountId,
+            AccountId = int.Parse(accountId),
             Username = username,
             ExpiresAt = validated.GetExpiry(),
             CreatedAt = validated.GetCreatedAt(),

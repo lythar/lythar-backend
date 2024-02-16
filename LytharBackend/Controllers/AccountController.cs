@@ -51,9 +51,6 @@ public class AccountController : Controller
     [HttpPost]
     [Route("login")]
     [SwaggerResponse(HttpStatusCode.OK, typeof(LoginResponse))]
-    [SwaggerResponse(HttpStatusCode.BadRequest, typeof(BaseHttpExceptionOptions))]
-    [SwaggerResponse(HttpStatusCode.Unauthorized, typeof(BaseHttpExceptionOptions))]
-    [SwaggerResponse(HttpStatusCode.InternalServerError, typeof(BaseHttpExceptionOptions))]
     public async Task<LoginResponse> Login([FromBody] LoginForm loginForm)
     {
         var user = await DatabaseContext.Users.Where(x => x.Login == loginForm.Login).FirstOrDefaultAsync();
@@ -95,10 +92,92 @@ public class AccountController : Controller
             Username = user.Login
         });
 
+        HttpContext.Response.Cookies.Append("token", token, new CookieOptions
+        {
+            Expires = DateTime.UtcNow.AddHours(1)
+        });
+
         return new LoginResponse
         {
             Status = ResponseStatus.Success,
             Token = token
+        };
+    }
+
+    [HttpDelete]
+    [Route("logout")]
+    public IActionResult Logout()
+    {
+        HttpContext.Response.Cookies.Delete("token");
+
+        return Ok();
+    }
+
+    public class UserAccountResponse
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+        public string? AvatarUrl { get; set; }
+    }
+
+    [HttpGet]
+    [Route("account")]
+    [SwaggerResponse(HttpStatusCode.OK, typeof(UserAccountResponse))]
+    public async Task<UserAccountResponse> GetAccount()
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+
+        if (account == null)
+        {
+            throw new AccountNotFoundException(token.AccountId.ToString());
+        }
+
+        return new UserAccountResponse
+        {
+            Id = account.Id,
+            Name = account.Name,
+            LastName = account.LastName,
+            Email = account.Email,
+            AvatarUrl = account.AvatarUrl
+        };
+    }
+
+    public class UpdateAccountForm
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+    }
+
+    [HttpPatch]
+    [Route("account")]
+    [SwaggerResponse(HttpStatusCode.OK, typeof(UserAccountResponse))]
+    public async Task<UserAccountResponse> UpdateAccount([FromBody] UpdateAccountForm updateAccount)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+
+        if (account == null)
+        {
+            throw new AccountNotFoundException(token.AccountId.ToString());
+        }
+
+        if (updateAccount.FirstName != null) account.Name = updateAccount.FirstName;
+        if (updateAccount.LastName != null) account.LastName = updateAccount.LastName;
+        if (updateAccount.Email != null) account.Email = updateAccount.Email;
+
+        await DatabaseContext.SaveChangesAsync();
+
+        return new UserAccountResponse
+        {
+            Id = account.Id,
+            Name = account.Name,
+            LastName = account.LastName,
+            Email = account.Email,
+            AvatarUrl = account.AvatarUrl
         };
     }
 }
