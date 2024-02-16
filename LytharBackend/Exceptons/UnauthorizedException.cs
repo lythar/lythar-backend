@@ -4,5 +4,5 @@ namespace LytharBackend.Exceptons;
 
 public class UnauthorizedException : BaseHttpException
 {
-    public UnauthorizedException() : base("Unauthorized", "You are unauthorized to access this service.", HttpStatusCode.Unauthorized) { }
+    public UnauthorizedException() : base("Unauthorized", "Nie masz dostępu do tej usługi.", HttpStatusCode.Unauthorized) { }
 }

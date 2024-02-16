@@ -4,5 +4,5 @@ namespace LytharBackend.Exceptons;
 
 public class AccountExistsException : BaseHttpException
 {
-    public AccountExistsException(string login) : base("AccountExists", $"Account '{login}' already exists.", HttpStatusCode.BadRequest) { }
+    public AccountExistsException(string login) : base("AccountExists", $"Konto '{login}' już istnieje.", HttpStatusCode.BadRequest) { }
 }

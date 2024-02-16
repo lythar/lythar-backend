@@ -2,5 +2,5 @@
 
 public class InternalServerException : BaseHttpException
 {
-    public InternalServerException() : base("InternalServerException", "Internal server error.", System.Net.HttpStatusCode.InternalServerError) { }
+    public InternalServerException() : base("InternalServerException", "Błąd serwera.", System.Net.HttpStatusCode.InternalServerError) { }
 }

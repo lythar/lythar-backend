@@ -4,5 +4,5 @@ namespace LytharBackend.Exceptons;
 
 public class ChannelNotFoundException : BaseHttpException
 {
-    public ChannelNotFoundException(string channelId) : base("ChannelNotFound", $"Channel '{channelId}' doesn't exist.", HttpStatusCode.NotFound) { }
+    public ChannelNotFoundException(string channelId) : base("ChannelNotFound", $"Kanał '{channelId}' nie istnieje.", HttpStatusCode.NotFound) { }
 }
