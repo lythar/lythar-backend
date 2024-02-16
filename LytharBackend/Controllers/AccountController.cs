@@ -45,6 +45,7 @@ public class AccountController : Controller
         public string Login { get; set; } = null!;
         [Required]
         public string Password { get; set; } = null!;
+        [MaxLength(32)]
         public string? NewPassword { get; set; }
     }
 
@@ -145,10 +146,32 @@ public class AccountController : Controller
         };
     }
 
+    [HttpGet]
+    [Route("accounts")]
+    [SwaggerResponse(HttpStatusCode.OK, typeof(List<UserAccountResponse>))]
+    public async Task<List<UserAccountResponse>> GetAccounts([FromQuery] List<int> accountIds)
+    {
+        await SessionService.VerifyRequest(HttpContext);
+
+        var accounts = await DatabaseContext.Users.Where(x => accountIds.Contains(x.Id)).ToListAsync();
+
+        return accounts.ConvertAll(x => new UserAccountResponse
+        {
+            Id = x.Id,
+            Name = x.Name,
+            LastName = x.LastName,
+            Email = x.Email,
+            AvatarUrl = x.AvatarUrl
+        });
+    }
+
     public class UpdateAccountForm
     {
+        [MaxLength(32)]
         public string? FirstName { get; set; }
+        [MaxLength(32)]
         public string? LastName { get; set; }
+        [MaxLength(64)]
         public string? Email { get; set; }
     }
 
@@ -165,9 +188,9 @@ public class AccountController : Controller
             throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
-        if (updateAccount.FirstName != null) account.Name = updateAccount.FirstName;
-        if (updateAccount.LastName != null) account.LastName = updateAccount.LastName;
-        if (updateAccount.Email != null) account.Email = updateAccount.Email;
+        if (updateAccount.FirstName != null) account.Name = updateAccount.FirstName.Trim();
+        if (updateAccount.LastName != null) account.LastName = updateAccount.LastName.Trim();
+        if (updateAccount.Email != null) account.Email = updateAccount.Email.Trim();
 
         await DatabaseContext.SaveChangesAsync();
 

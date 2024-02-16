@@ -3,8 +3,10 @@ namespace LytharBackend;
 using LytharBackend.Exceptons;
 using LytharBackend.Ldap;
 using LytharBackend.Session;
+using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json.Serialization;
@@ -50,14 +52,20 @@ public class Program
                 }
                 else
                 {
-                    httpException = new BaseHttpException("InternalServerError", "Internal server error.", System.Net.HttpStatusCode.InternalServerError);
+                    httpException = new InternalServerException();
                 }
 
                 context.Response.StatusCode = httpException.Options.StatusCode;
                 await context.Response.WriteAsJsonAsync(httpException.Options);
             });
         });
+        app.UseWebSockets();
         app.UseRouting();
+        app.UseCors(x => x
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .SetIsOriginAllowed(origin => true)
+            .AllowCredentials());
 
         if (app.Environment.IsDevelopment())
         {
@@ -66,6 +74,39 @@ public class Program
         }
 
         app.MapControllers();
+
+        app.Use(async (HttpContext context, RequestDelegate next) =>
+        {
+            if (context.WebSockets.IsWebSocketRequest)
+            {
+                var sessionService = context.RequestServices.GetService<ISessionService>();
+
+                if (sessionService == null)
+                {
+                    throw new InternalServerException();
+                }
+
+                var token = await sessionService.VerifyRequest(context);
+
+                using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
+                var client = new WebSocketClient(context, webSocket, token);
+
+                await client.Listen();
+            }
+            else
+            {
+                await next(context);
+            }
+
+            // 404 handler, we do this so we don't write logs for 404s
+            if (context.Response.StatusCode == 404 && !context.Response.HasStarted)
+            {
+                var notFound = new NotFoundException(context.Request.Path);
+
+                context.Response.StatusCode = notFound.Options.StatusCode;
+                await context.Response.WriteAsJsonAsync(notFound.Options);
+            }
+        });
 
         app.Run();
     }

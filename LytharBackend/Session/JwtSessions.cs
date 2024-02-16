@@ -24,13 +24,15 @@ public static class JwtUtils
 public class JwtSessionsService : ISessionService
 {
     private readonly IConfiguration Configuration;
+    private readonly ILogger Logger;
 
     private readonly RsaSecurityKey SecurityKey;
     private readonly JsonWebTokenHandler TokenHandler = new();
 
-    public JwtSessionsService(IConfiguration configuration)
+    public JwtSessionsService(IConfiguration configuration, ILogger<JwtSessionsService> logger)
     {
         Configuration = configuration;
+        Logger = logger;
 
         string? privateKey = Configuration["Jwt:PrivateKey"];
 
@@ -54,7 +56,7 @@ public class JwtSessionsService : ISessionService
     {
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            SigningCredentials = new SigningCredentials(SecurityKey, SecurityAlgorithms.RsaSha256Signature),
+            SigningCredentials = new SigningCredentials(SecurityKey, SecurityAlgorithms.RsaSha256),
             Issuer = "Lythar",
             Expires = DateTime.UtcNow.AddHours(1),
             IssuedAt = DateTime.UtcNow,

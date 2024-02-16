@@ -27,7 +27,7 @@ public static class SessionMethods
 {
     public static async Task<SessionData> VerifyRequest(this ISessionService service, HttpContext context)
     {
-        var token = context.Request.Headers["Authorization"].FirstOrDefault()?.Split(' ').Last()
+        var token = context.Request.Headers["Authorization"].FirstOrDefault()
                 ?? context.Request.Cookies["token"];
 
         if (token == null)
