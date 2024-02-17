@@ -41,15 +41,18 @@ public class JwtSessionsService : ISessionService
             throw new Exception("'Jwt:PrivateKey' not found in configuration.");
         }
 
+        privateKey = File.ReadAllText(privateKey);
+
         privateKey = privateKey
             .Replace("-----BEGIN PRIVATE KEY-----", "")
             .ReplaceLineEndings("")
             .Replace("-----END PRIVATE KEY-----", "");
 
+        byte[] privateKeyBytes = Convert.FromBase64String(privateKey);
         var rsa = RSA.Create();
-        rsa.ImportPkcs8PrivateKey(Convert.FromBase64String(privateKey), out _);
+        rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _);
 
-        SecurityKey = new(rsa);
+        SecurityKey = new RsaSecurityKey(rsa);
     }
 
     public Task<string> CreateSession(CreateSessionOptions options)
