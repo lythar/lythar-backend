@@ -150,6 +150,7 @@ public class ChannelsController : Controller
     {
         public required long MessageId { get; set; }
         public required string Content { get; set; }
+        public required long ChannelId { get; set; }
         public required DateTime SentAt { get; set; }
         public DateTime? EditedAt { get; set; }
         public required AccountController.UserAccountResponse Author { get; set; }
@@ -183,6 +184,7 @@ public class ChannelsController : Controller
         {
             MessageId = x.MessageId,
             Content = x.Content,
+            ChannelId = x.ChannelId,
             SentAt = x.SentAt,
             EditedAt = x.EditedAt,
             Author = new AccountController.UserAccountResponse
