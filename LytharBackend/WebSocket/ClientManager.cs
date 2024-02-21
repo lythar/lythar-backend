@@ -24,7 +24,7 @@ public class WebSocketClientManager
         return Sockets.Values;
     }
 
-    public async void BroadcastFilter<T>(Func<WebSocketClient, bool> filter, T message)
+    public async Task BroadcastFilter<T>(Func<WebSocketClient, bool> filter, T message)
     {
         foreach (var socket in Sockets.Values)
         {
@@ -41,6 +41,11 @@ public class WebSocketClientManager
         {
             await socket.Send(message);
         }
+    }
+
+    public WebSocketClient? FirstOrDefault(Func<WebSocketClient, bool> filter)
+    {
+        return Sockets.Values.FirstOrDefault(filter);
     }
 
     public void RemoveSocket(Guid socketId)

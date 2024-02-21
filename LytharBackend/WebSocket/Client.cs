@@ -7,11 +7,13 @@ using System.Text.Json;
 
 public class WebSocketClient
 {
+    public static WebSocketClientManager Manager { get; } = new();
+
+    public UserStatus Status { get; set; } = new();
+    private readonly SessionData Session;
     private HttpContext HttpContext;
     private WebSocket Socket;
-    private readonly SessionData Session;
     private Guid SessionId;
-    public static WebSocketClientManager Manager { get; } = new();
 
     public WebSocketClient(HttpContext httpContext, WebSocket socket, SessionData sessionData)
     {
@@ -24,6 +26,9 @@ public class WebSocketClient
     {
         SessionId = Manager.AddSocket(this);
 
+        await ReceiveStatus();
+        await BroadcastStatus();
+
         var buffer = new byte[1024 * 4];
         var receiveResult = await Socket.ReceiveAsync(
             new ArraySegment<byte>(buffer), CancellationToken.None
@@ -35,9 +40,13 @@ public class WebSocketClient
 
             receiveResult = await Socket.ReceiveAsync(
                 new ArraySegment<byte>(buffer),
-                CancellationToken.None
+                CancellationToken.None 
             );
         }
+
+        Status.IsOnline = false;
+
+        await BroadcastStatus();
 
         Manager.RemoveSocket(SessionId);
 
@@ -68,5 +77,32 @@ public class WebSocketClient
     private async Task OnMessage(byte[] buffer, WebSocketReceiveResult receiveResult)
     {
         await Send(new { Type = "pong" });
+    }
+
+    private async Task BroadcastStatus()
+    {
+        await Manager.BroadcastFilter(
+            x => x.Session.AccountId != Session.AccountId,
+            new {
+                Type = "UserStatus",
+                Data = new UserStatusMessage(Session.AccountId, Status)
+            }
+        );
+    }
+
+    private async Task ReceiveStatus()
+    {
+        List<UserStatusMessage> userStatuses = new();
+
+        foreach (var socket in Manager.GetAllSockets())
+        {
+            userStatuses.Add(new UserStatusMessage(socket.Session.AccountId, socket.Status));
+        }
+
+        await Send(new
+        {
+            Type = "UserStatusBulk",
+            Data = userStatuses
+        });
     }
 }
