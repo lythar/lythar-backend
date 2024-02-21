@@ -185,6 +185,57 @@ public class ChannelsController : Controller
         });
     }
 
+    [HttpPatch]
+    [Route("{channelId}/messages/{messageId}")]
+    public async Task EditMessage([FromRoute] long channelId, [FromRoute] long messageId, [FromBody] SendMessageForm messageForm)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+
+        var message = await DatabaseContext.Messages.Where(x => x.ChannelId == channelId && x.MessageId == messageId).FirstOrDefaultAsync();
+
+        if (user == null)
+        {
+            throw new AccountNotFoundException(token.AccountId.ToString());
+        }
+
+        if (message == null)
+        {
+            throw new MessageNotFoundException(messageId.ToString());
+        }
+
+        if (message.AuthorId != token.AccountId)
+        {
+            throw new ForbiddenException($"{token.AccountId} nie ma uprawnień do edycji wiadomości innego użytkownika.");
+        }
+
+        message.Content = messageForm.Content.Trim();
+        message.EditedAt = DateTime.UtcNow;
+
+        await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<ListMessagesResponse>
+        {
+            Type = "MessageEdited",
+            Data = new ListMessagesResponse
+            {
+                MessageId = message.MessageId,
+                Content = message.Content,
+                ChannelId = message.ChannelId,
+                SentAt = message.SentAt,
+                EditedAt = message.EditedAt,
+                Author = new AccountController.UserAccountResponse
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    AvatarUrl = user.AvatarUrl
+                }
+            }
+        });
+    }
+
     [HttpDelete]
     [Route("{channelId}/messages/{messageId}")]
     public async Task DeleteMessage([FromRoute] long channelId, [FromRoute] long messageId)
