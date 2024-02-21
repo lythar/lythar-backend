@@ -41,7 +41,7 @@ public class JwtSessionsService : ISessionService
             throw new Exception("'Jwt:PrivateKey' not found in configuration.");
         }
 
-        privateKey = File.ReadAllText(privateKey);
+        privateKey = privateKey.Contains("-----") ? privateKey : File.ReadAllText(privateKey);
 
         privateKey = privateKey
             .Replace("-----BEGIN PRIVATE KEY-----", "")

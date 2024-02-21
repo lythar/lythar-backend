@@ -164,6 +164,30 @@ public class AccountController : Controller
         });
     }
 
+    public class ListAccountsQuery
+    {
+        public int? Before { get; set; }
+        public int? After { get; set; }
+        [Range(1, 1000)]
+        public int? Limit { get; set; }
+    }
+
+    [HttpGet]
+    [Route("accounts/list")]
+    [SwaggerResponse(200, typeof(List<int>))]
+    public async Task<List<int>> GetAccountsList([FromQuery] ListAccountsQuery query)
+    {
+        await SessionService.VerifyRequest(HttpContext);
+
+        return await DatabaseContext.Users
+            .OrderBy(x => x.Id)
+            .Where(x => query.Before == null || x.Id < query.Before)
+            .Where(x => query.After == null || x.Id > query.After)
+            .Take(query.Limit ?? 1000)
+            .Select(x => x.Id)
+            .ToListAsync();
+    }
+
     public class UpdateAccountForm
     {
         [MaxLength(32)]

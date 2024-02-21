@@ -1,6 +1,7 @@
 ﻿using LytharBackend.Exceptons;
 using LytharBackend.Models;
 using LytharBackend.Session;
+using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
@@ -124,12 +125,18 @@ public class ChannelsController : Controller
     public async Task SendMessage([FromRoute] long channelId, [FromBody] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
 
         var channel = await DatabaseContext.Channels.Where(x => x.ChannelId == channelId).FirstOrDefaultAsync();
 
         if (channel == null)
         {
             throw new ChannelNotFoundException(channelId.ToString());
+        }
+
+        if (user == null)
+        {
+            throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
         var message = new Message
@@ -140,8 +147,28 @@ public class ChannelsController : Controller
             AuthorId = token.AccountId
         };
 
-        DatabaseContext.Messages.Add(message);
+        var insertedMessage = DatabaseContext.Messages.Add(message);
         await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<ListMessagesResponse>
+        {
+            Type = "NewMessage",
+            Data = new ListMessagesResponse
+            {
+                MessageId = insertedMessage.Entity.MessageId,
+                Content = insertedMessage.Entity.Content,
+                ChannelId = insertedMessage.Entity.ChannelId,
+                SentAt = insertedMessage.Entity.SentAt,
+                Author = new AccountController.UserAccountResponse
+                {
+                    Id = user.Id,
+                    Name = user.Name,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    AvatarUrl = user.AvatarUrl
+                }
+            }
+        });
 
         return;
     }

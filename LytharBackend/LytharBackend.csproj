@@ -48,8 +48,4 @@
 		<None Include="C:\Projects\lythar-backend\LytharBackend\.editorconfig" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="WebSocket\" />
-	</ItemGroup>
-
 </Project>
