@@ -50,7 +50,12 @@ public class WebSocketClient
 
     public async Task Send<T>(T message)
     {
-        var serialized = JsonSerializer.Serialize(message);
+        var serializeOptions = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        var serialized = JsonSerializer.Serialize(message, serializeOptions);
 
         await Socket.SendAsync(
             new ArraySegment<byte>(Encoding.UTF8.GetBytes(serialized)),
