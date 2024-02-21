@@ -55,12 +55,20 @@ public class ChannelsController : Controller
         var instertedChannel = DatabaseContext.Channels.Add(channel);
         await DatabaseContext.SaveChangesAsync();
 
-        return new CreateChannelResponse
+        var response = new CreateChannelResponse
         {
             ChannelId = instertedChannel.Entity.ChannelId,
             Name = instertedChannel.Entity.Name,
             Description = instertedChannel.Entity.Description
         };
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<CreateChannelResponse>
+        {
+            Type = "ChannelCreated",
+            Data = response
+        });
+
+        return response;
     }
 
     [HttpGet]
@@ -104,6 +112,12 @@ public class ChannelsController : Controller
         {
             throw new ChannelNotFoundException(channelId.ToString());
         }
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<long>
+        {
+            Type = "ChannelDeleted",
+            Data = channel.ChannelId
+        });
 
         DatabaseContext.Channels.Remove(channel);
         await DatabaseContext.SaveChangesAsync();
@@ -169,8 +183,35 @@ public class ChannelsController : Controller
                 }
             }
         });
+    }
 
-        return;
+    [HttpDelete]
+    [Route("{channelId}/messages/{messageId}")]
+    public async Task DeleteMessage([FromRoute] long channelId, [FromRoute] long messageId)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+
+        var message = await DatabaseContext.Messages.Where(x => x.ChannelId == channelId && x.MessageId == messageId).FirstOrDefaultAsync();
+
+        if (message == null)
+        {
+            throw new MessageNotFoundException(messageId.ToString());
+        }
+
+        if (message.AuthorId != token.AccountId)
+        {
+            throw new ForbiddenException($"{token.AccountId} nie ma uprawnień do usunięcia wiadomości innego użytkownika.");
+        }
+
+        DatabaseContext.Messages.Remove(message);
+        await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<long>
+        {
+            Type = "MessageDeleted",
+            Data = messageId
+        });
     }
 
     public class ListMessagesResponse
