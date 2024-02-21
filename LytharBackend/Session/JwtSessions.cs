@@ -61,7 +61,7 @@ public class JwtSessionsService : ISessionService
         {
             SigningCredentials = new SigningCredentials(SecurityKey, SecurityAlgorithms.RsaSha256),
             Issuer = "Lythar",
-            Expires = DateTime.UtcNow.AddHours(1),
+            Expires = DateTime.UtcNow.AddHours(6),
             IssuedAt = DateTime.UtcNow,
             Subject = new ClaimsIdentity(new Claim[]
             {
@@ -94,8 +94,9 @@ public class JwtSessionsService : ISessionService
 
         var accountId = (string?)validated.Claims.First(x => x.Key == "sub").Value;
         var username = (string?)validated.Claims.First(x => x.Key == "name").Value;
+        var sessionId = (string?)validated.Claims.First(x => x.Key == "p").Value;
 
-        if (accountId == null || username == null)
+        if (accountId == null || username == null || sessionId == null)
         {
             throw new UnauthorizedException();
         }
@@ -106,7 +107,7 @@ public class JwtSessionsService : ISessionService
             Username = username,
             ExpiresAt = validated.GetExpiry(),
             CreatedAt = validated.GetCreatedAt(),
-            SessionId = Guid.NewGuid().ToString()
+            SessionId = sessionId
         };
     }
 }
