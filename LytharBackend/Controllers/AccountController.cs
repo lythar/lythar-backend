@@ -1,5 +1,6 @@
 ﻿using Isopoh.Cryptography.Argon2;
 using LytharBackend.Exceptons;
+using LytharBackend.Files;
 using LytharBackend.Ldap;
 using LytharBackend.Session;
 using Microsoft.AspNetCore.Mvc;
@@ -15,13 +16,15 @@ public class AccountController : Controller
 {
     private LdapService LdapService;
     private ISessionService SessionService;
+    private IFileService FileService;
     private DatabaseContext DatabaseContext;
 
-    public AccountController(LdapService ldapService, ISessionService sessionService, DatabaseContext databaseContext)
+    public AccountController(LdapService ldapService, ISessionService sessionService, DatabaseContext databaseContext, IFileService fileService)
     {
         LdapService = ldapService;
         SessionService = sessionService;
         DatabaseContext = databaseContext;
+        FileService = fileService;
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -214,6 +217,36 @@ public class AccountController : Controller
         if (updateAccount.FirstName != null) account.Name = updateAccount.FirstName.Trim();
         if (updateAccount.LastName != null) account.LastName = updateAccount.LastName.Trim();
         if (updateAccount.Email != null) account.Email = updateAccount.Email.Trim();
+
+        await DatabaseContext.SaveChangesAsync();
+
+        return new UserAccountResponse
+        {
+            Id = account.Id,
+            Name = account.Name,
+            LastName = account.LastName,
+            Email = account.Email,
+            AvatarUrl = account.AvatarUrl
+        };
+    }
+
+    [HttpPost]
+    [Route("account/avatar")]
+    [SwaggerResponse(200, typeof(UserAccountResponse))]
+    public async Task<UserAccountResponse> UpdateAvatar([FromBody] MemoryStream avatarData)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+
+        if (account == null)
+        {
+            throw new AccountNotFoundException(token.AccountId.ToString());
+        }
+
+        var avatarId = await FileService.UploadFile(avatarData, "avatars", account.Id.ToString());
+        var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
+
+        account.AvatarUrl = avatarUrl;
 
         await DatabaseContext.SaveChangesAsync();
 

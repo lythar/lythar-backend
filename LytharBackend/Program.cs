@@ -1,6 +1,7 @@
 namespace LytharBackend;
 
 using LytharBackend.Exceptons;
+using LytharBackend.Files;
 using LytharBackend.Ldap;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
@@ -35,6 +36,7 @@ public class Program
             options.UseNpgsql(builder.Configuration.GetConnectionString("DatabaseContext")));
         builder.Services.AddSingleton<LdapService>();
         builder.Services.AddSingleton<ISessionService, JwtSessionsService>();
+        builder.Services.AddSingleton<IFileService, LocalFileService>();
 
         var app = builder.Build();
 
