@@ -82,6 +82,8 @@ public class Program
 
         if (storagePath != null)
         {
+            Directory.CreateDirectory(storagePath);
+
             app.UseStaticFiles(new StaticFileOptions
             {
                 FileProvider = new PhysicalFileProvider(Path.GetFullPath(storagePath)),

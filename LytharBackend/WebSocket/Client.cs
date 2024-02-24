@@ -92,17 +92,10 @@ public class WebSocketClient
 
     private async Task ReceiveStatus()
     {
-        List<UserStatusMessage> userStatuses = new();
-
-        foreach (var socket in Manager.GetAllSockets())
-        {
-            userStatuses.Add(new UserStatusMessage(socket.Session.AccountId, socket.Status));
-        }
-
         await Send(new
         {
             Type = "UserStatusBulk",
-            Data = userStatuses
+            Data = Manager.GetAllSockets().Select(x => x.Session.AccountId)
         });
     }
 }
