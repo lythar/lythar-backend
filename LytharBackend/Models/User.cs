@@ -13,10 +13,9 @@ public class User
     public string? Email { get; set; }
     public string Password { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Any URL that fits in HTML img src attribute, so can be a base64 blob or an actual URL
-    /// </summary>
+    public string? AvatarId { get; set; }
     public string? AvatarUrl { get; set; }
+
 
     public static User FromLdap(SearchResultAttributeCollection attr)
     {

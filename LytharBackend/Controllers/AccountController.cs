@@ -233,7 +233,7 @@ public class AccountController : Controller
     [HttpPost]
     [Route("account/avatar")]
     [SwaggerResponse(200, typeof(UserAccountResponse))]
-    public async Task<UserAccountResponse> UpdateAvatar([FromBody] MemoryStream avatarData)
+    public async Task<UserAccountResponse> UpdateAvatar(IFormFile avatarData)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
         var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
@@ -243,9 +243,29 @@ public class AccountController : Controller
             throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
-        var avatarId = await FileService.UploadFile(avatarData, "avatars", account.Id.ToString());
+        if (avatarData.Length > 1024 * 1024)
+        {
+            throw new FileSizeException(avatarData.Length, 1024 * 1024);
+        }
+
+        var allowedFileTypes = new List<string> { "image/jpeg", "image/png", "image/gif", "image/avif", "image/apng", "image/webp" };
+        var extension = Path.GetExtension(avatarData.FileName);
+        var fileName = $"{account.Id}{extension}";
+
+        if (!allowedFileTypes.Contains(avatarData.ContentType))
+        {
+            throw new InvalidFileTypeException(avatarData.ContentType);
+        }
+
+        var avatarId = await FileService.UploadFile(avatarData.OpenReadStream(), "avatars", fileName);
         var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
 
+        if (account.AvatarId != null)
+        {
+            await FileService.DeleteFile("avatars", account.AvatarId);
+        }
+
+        account.AvatarId = avatarId;
         account.AvatarUrl = avatarUrl;
 
         await DatabaseContext.SaveChangesAsync();

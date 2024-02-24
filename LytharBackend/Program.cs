@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
 using System.Text.Json.Serialization;
 
 public class Program
@@ -75,6 +76,17 @@ public class Program
 
             app.UseOpenApi();
             app.UseSwaggerUi();
+        }
+
+        string? storagePath = app.Configuration["LocalFileService:RootPath"];
+
+        if (storagePath != null)
+        {
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new PhysicalFileProvider(Path.GetFullPath(storagePath)),
+                RequestPath = "/api/uploaded"
+            });
         }
 
         app.MapControllers();

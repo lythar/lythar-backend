@@ -27,8 +27,12 @@ public class LocalFileService : IFileService
     public async Task<string> UploadFile(Stream fileStream, string fileNamespace, string fileName)
     {
         string filePath = GetFilePath(fileNamespace, fileName);
+        string? rootPath = Path.GetDirectoryName(filePath);
 
-        Directory.CreateDirectory(filePath);
+        if (rootPath != null)
+        {
+            Directory.CreateDirectory(rootPath);
+        }
 
         using var file = File.Create(filePath);
         
@@ -48,6 +52,6 @@ public class LocalFileService : IFileService
 
     public Task<string> GetFileUrl(string fileNamespace, string fileName)
     {
-        return Task.FromResult($"/uploaded/{fileNamespace}/{fileName}");
+        return Task.FromResult($"/api/uploaded/{fileNamespace}/{fileName}");
     }
 }
