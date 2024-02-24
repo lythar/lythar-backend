@@ -97,7 +97,7 @@ public class AccountController : Controller
 
         HttpContext.Response.Cookies.Append("token", token, new CookieOptions
         {
-            Expires = DateTime.UtcNow.AddHours(1)
+            Expires = DateTime.UtcNow.AddHours(6)
         });
 
         return new LoginResponse
