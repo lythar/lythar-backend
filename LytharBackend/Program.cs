@@ -7,6 +7,7 @@ using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -38,6 +39,11 @@ public class Program
         builder.Services.AddSingleton<LdapService>();
         builder.Services.AddSingleton<ISessionService, JwtSessionsService>();
         builder.Services.AddSingleton<IFileService, LocalFileService>();
+
+        builder.WebHost.ConfigureKestrel(serverOptions =>
+        {
+            serverOptions.Limits.MaxRequestBodySize = 512 * 1024 * 1024;
+        });
 
         var app = builder.Build();
 

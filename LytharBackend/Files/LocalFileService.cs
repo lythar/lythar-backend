@@ -21,7 +21,7 @@ public class LocalFileService : IFileService
 
     private string GetFilePath(string fileNamespace, string fileName)
     {
-        return Path.Combine(StoragePath, Path.GetFileName(fileNamespace), Path.GetFileName(fileName));
+        return Path.Combine(StoragePath, fileNamespace, Path.GetFileName(fileName));
     }
 
     public async Task<string> UploadFile(Stream fileStream, string fileNamespace, string fileName)

@@ -1,4 +1,5 @@
 ﻿using LytharBackend.Exceptons;
+using LytharBackend.Files;
 using LytharBackend.Models;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
@@ -13,11 +14,13 @@ namespace LytharBackend.Controllers;
 public class ChannelsController : Controller
 {
     private ISessionService SessionService;
+    private IFileService FileService;
     private DatabaseContext DatabaseContext;
 
-    public ChannelsController(ISessionService sessionService, DatabaseContext databaseContext)
+    public ChannelsController(ISessionService sessionService, IFileService fileService, DatabaseContext databaseContext)
     {
         SessionService = sessionService;
+        FileService = fileService;
         DatabaseContext = databaseContext;
     }
 
@@ -127,6 +130,7 @@ public class ChannelsController : Controller
     {
         [MaxLength(2000)]
         public required string Content { get; set; }
+        public List<IFormFile> Files { get; set; } = new();
     }
 
     public class SendMessageResponse
@@ -136,7 +140,7 @@ public class ChannelsController : Controller
 
     [HttpPost]
     [Route("{channelId}/messages")]
-    public async Task SendMessage([FromRoute] long channelId, [FromBody] SendMessageForm messageForm)
+    public async Task SendMessage([FromRoute] long channelId, [FromForm] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
         var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
@@ -153,12 +157,42 @@ public class ChannelsController : Controller
             throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
+        if (messageForm.Files.Count > 5)
+        {
+            throw new TooManyFilesException(5, messageForm.Files.Count);
+        }
+
+        var namespaceId = $"attachments/{channel.ChannelId}/{Guid.NewGuid()}";
+
+        var attachments = new List<Attachment>();
+
+        foreach (var file in messageForm.Files)
+        {
+            if (file.Length > 100 * 1024 * 1024)
+            {
+                throw new FileSizeException(file.Length, 128 * 1024 * 1024);
+            }
+
+            var cdnId = await FileService.UploadFile(file.OpenReadStream(), namespaceId, file.FileName);
+            var cdnUrl = await FileService.GetFileUrl(namespaceId, cdnId);
+
+            var attachment = new Attachment
+            {
+                Name = file.FileName,
+                CdnNamespace = namespaceId,
+                CdnUrl = cdnUrl
+            };
+
+            attachments.Add(attachment);
+        }
+
         var message = new Message
         {
             Content = messageForm.Content.Trim(),
             SentAt = DateTime.UtcNow,
             ChannelId = channelId,
-            AuthorId = token.AccountId
+            AuthorId = token.AccountId,
+            Attachments = attachments
         };
 
         var insertedMessage = DatabaseContext.Messages.Add(message);
@@ -180,7 +214,8 @@ public class ChannelsController : Controller
                     LastName = user.LastName,
                     Email = user.Email,
                     AvatarUrl = user.AvatarUrl
-                }
+                },
+                Attachments = insertedMessage.Entity.Attachments
             }
         });
     }
@@ -231,7 +266,8 @@ public class ChannelsController : Controller
                     LastName = user.LastName,
                     Email = user.Email,
                     AvatarUrl = user.AvatarUrl
-                }
+                },
+                Attachments = message.Attachments
             }
         });
     }
@@ -273,6 +309,7 @@ public class ChannelsController : Controller
         public required DateTime SentAt { get; set; }
         public DateTime? EditedAt { get; set; }
         public required AccountController.UserAccountResponse Author { get; set; }
+        public required List<Attachment> Attachments { get; set; }
     }
 
     public class ListMessagesQuery
@@ -313,7 +350,8 @@ public class ChannelsController : Controller
                 LastName = x.Author.LastName,
                 Email = x.Author.Email,
                 AvatarUrl = x.Author.AvatarUrl
-            }
+            },
+            Attachments = x.Attachments
         });
     }
 }

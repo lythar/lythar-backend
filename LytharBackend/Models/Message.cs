@@ -1,5 +1,13 @@
 ﻿namespace LytharBackend.Models;
 
+public class Attachment
+{
+    public Guid Id { get; set; }
+    public required string Name { get; set; }
+    public required string CdnNamespace { get; set; }
+    public required string CdnUrl { get; set; }
+}
+
 public class Message
 {
     public long MessageId { get; set; }
@@ -10,4 +18,5 @@ public class Message
     public required long ChannelId { get; set; }
     public User Author { get; set; } = null!;
     public required int AuthorId { get; set; }
+    public List<Attachment> Attachments { get; set; } = new();
 }
