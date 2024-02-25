@@ -45,6 +45,14 @@ public class Program
             serverOptions.Limits.MaxRequestBodySize = 512 * 1024 * 1024;
         });
 
+        var autoRunMigrations = builder.Configuration.GetValue<bool?>("DatabaseContext:AutoRunMigrations")
+            ?? builder.Environment.IsDevelopment();
+
+        if (autoRunMigrations)
+        {
+            builder.Services.Configure<DatabaseContext>(x => x.Database.Migrate());
+        }
+
         var app = builder.Build();
 
         app.UseExceptionHandler(options =>
