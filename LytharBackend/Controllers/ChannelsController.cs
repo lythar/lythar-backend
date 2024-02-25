@@ -39,8 +39,7 @@ public class ChannelsController : Controller
         public required string Description { get; set; }
     }
 
-    [HttpPost]
-    [Route("create")]
+    [HttpPost, Route("create")]
     [SwaggerResponse(200, typeof(CreateChannelResponse))]
     public async Task<CreateChannelResponse> CreateChannel([FromBody] CreateChannelForm createChannelForm)
     {
@@ -74,8 +73,7 @@ public class ChannelsController : Controller
         return response;
     }
 
-    [HttpGet]
-    [Route("list")]
+    [HttpGet, Route("list")]
     [SwaggerResponse(200, typeof(IEnumerable<Channel>))]
     public async Task<IEnumerable<Channel>> ListChannels()
     {
@@ -84,8 +82,7 @@ public class ChannelsController : Controller
         return await DatabaseContext.Channels.ToListAsync();
     }
 
-    [HttpGet]
-    [Route("{channelId}")]
+    [HttpGet, Route("{channelId}")]
     [SwaggerResponse(200, typeof(Channel))]
     public async Task<Channel> GetChannel([FromRoute] long channelId)
     {
@@ -101,8 +98,7 @@ public class ChannelsController : Controller
         return channel;
     }
 
-    [HttpDelete]
-    [Route("{channelId}")]
+    [HttpDelete, Route("{channelId}")]
     public async Task DeleteChannel([FromRoute] long channelId)
     {
         await SessionService.VerifyRequest(HttpContext);
@@ -137,8 +133,7 @@ public class ChannelsController : Controller
         public required long MessageId { get; set; }
     }
 
-    [HttpPost]
-    [Route("{channelId}/messages")]
+    [HttpPost, Route("{channelId}/messages")]
     public async Task SendMessage([FromRoute] long channelId, [FromBody] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
@@ -218,8 +213,7 @@ public class ChannelsController : Controller
         });
     }
 
-    [HttpPatch]
-    [Route("{channelId}/messages/{messageId}")]
+    [HttpPatch, Route("{channelId}/messages/{messageId}")]
     public async Task EditMessage([FromRoute] long channelId, [FromRoute] long messageId, [FromBody] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
@@ -270,8 +264,7 @@ public class ChannelsController : Controller
         });
     }
 
-    [HttpDelete]
-    [Route("{channelId}/messages/{messageId}")]
+    [HttpDelete, Route("{channelId}/messages/{messageId}")]
     public async Task DeleteMessage([FromRoute] long channelId, [FromRoute] long messageId)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
@@ -318,8 +311,7 @@ public class ChannelsController : Controller
         public int? Limit { get; set; }
     }
 
-    [HttpGet]
-    [Route("{channelId}/messages")]
+    [HttpGet, Route("{channelId}/messages")]
     [SwaggerResponse(200, typeof(IEnumerable<ListMessagesResponse>))]
     public async Task<IEnumerable<ListMessagesResponse>> ListMessages([FromRoute] long channelId, [FromQuery] ListMessagesQuery query)
     {

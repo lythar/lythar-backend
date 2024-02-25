@@ -51,8 +51,7 @@ public class AccountController : Controller
         public string? NewPassword { get; set; }
     }
 
-    [HttpPost]
-    [Route("login")]
+    [HttpPost, Route("login")]
     [SwaggerResponse(200, typeof(LoginResponse))]
     public async Task<LoginResponse> Login([FromBody] LoginForm loginForm)
     {
@@ -107,8 +106,7 @@ public class AccountController : Controller
         };
     }
 
-    [HttpDelete]
-    [Route("logout")]
+    [HttpDelete, Route("logout")]
     public IActionResult Logout()
     {
         HttpContext.Response.Cookies.Delete("token");
@@ -125,8 +123,7 @@ public class AccountController : Controller
         public string? AvatarUrl { get; set; }
     }
 
-    [HttpGet]
-    [Route("account")]
+    [HttpGet, Route("account")]
     [SwaggerResponse(200, typeof(UserAccountResponse))]
     public async Task<UserAccountResponse> GetAccount()
     {
@@ -148,8 +145,7 @@ public class AccountController : Controller
         };
     }
 
-    [HttpGet]
-    [Route("accounts")]
+    [HttpGet, Route("accounts")]
     [SwaggerResponse(200, typeof(List<UserAccountResponse>))]
     public async Task<List<UserAccountResponse>> GetAccounts([FromQuery] List<int> accountIds)
     {
@@ -175,8 +171,7 @@ public class AccountController : Controller
         public int? Limit { get; set; }
     }
 
-    [HttpGet]
-    [Route("accounts/list")]
+    [HttpGet, Route("accounts/list")]
     [SwaggerResponse(200, typeof(List<int>))]
     public async Task<List<int>> GetAccountsList([FromQuery] ListAccountsQuery query)
     {
@@ -201,8 +196,7 @@ public class AccountController : Controller
         public string? Email { get; set; }
     }
 
-    [HttpPatch]
-    [Route("account")]
+    [HttpPatch, Route("account")]
     [SwaggerResponse(200, typeof(UserAccountResponse))]
     public async Task<UserAccountResponse> UpdateAccount([FromBody] UpdateAccountForm updateAccount)
     {
@@ -230,10 +224,11 @@ public class AccountController : Controller
         };
     }
 
-    [HttpPost]
-    [Route("account/avatar")]
+    private static readonly string[] AllowedMimeTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
+
+    [HttpPost, Route("account/avatar")]
     [SwaggerResponse(200, typeof(UserAccountResponse))]
-    [OpenApiBodyParameter(["image/jpeg", "image/png", "image/gif", "image/avif", "image/apng", "image/webp"])]
+    [OpenApiBodyParameter(["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"])]
     public async Task<UserAccountResponse> UpdateAvatar()
     {
         var token = await SessionService.VerifyRequest(HttpContext);
@@ -258,13 +253,18 @@ public class AccountController : Controller
             throw new FileSizeException(0, 1024 * 1024);
         }
 
+        if (!AllowedMimeTypes.Contains(contentType))
+        {
+            throw new InvalidFileTypeException(contentType);
+        }
+
         if (length > 1024 * 1024)
         {
             throw new FileSizeException((long)length, 1024 * 1024);
         }
 
         var extension = Path.GetFileName(contentType);
-        var fileName = $"{account.Id}.{extension}";
+        var fileName = $"{Guid.NewGuid()}.{account.Id}.{extension}";
 
         if (account.AvatarId != null)
         {
