@@ -233,7 +233,8 @@ public class AccountController : Controller
     [HttpPost]
     [Route("account/avatar")]
     [SwaggerResponse(200, typeof(UserAccountResponse))]
-    public async Task<UserAccountResponse> UpdateAvatar(IFormFile avatarData)
+    [OpenApiBodyParameter(["image/jpeg", "image/png", "image/gif", "image/avif", "image/apng", "image/webp"])]
+    public async Task<UserAccountResponse> UpdateAvatar()
     {
         var token = await SessionService.VerifyRequest(HttpContext);
         var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
@@ -243,27 +244,35 @@ public class AccountController : Controller
             throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
-        if (avatarData.Length > 1024 * 1024)
+        string? contentType = HttpContext.Request.ContentType;
+        long? length = HttpContext.Request.ContentLength;
+        var avatarData = HttpContext.Request.Body;
+
+        if (length == null || contentType == null)
         {
-            throw new FileSizeException(avatarData.Length, 1024 * 1024);
+            throw new FileSizeException(0, 1024 * 1024);
         }
 
-        var allowedFileTypes = new List<string> { "image/jpeg", "image/png", "image/gif", "image/avif", "image/apng", "image/webp" };
-        var extension = Path.GetExtension(avatarData.FileName);
-        var fileName = $"{account.Id}{extension}";
-
-        if (!allowedFileTypes.Contains(avatarData.ContentType))
+        if (avatarData == null)
         {
-            throw new InvalidFileTypeException(avatarData.ContentType);
+            throw new FileSizeException(0, 1024 * 1024);
         }
 
-        var avatarId = await FileService.UploadFile(avatarData.OpenReadStream(), "avatars", fileName);
-        var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
+        if (length > 1024 * 1024)
+        {
+            throw new FileSizeException((long)length, 1024 * 1024);
+        }
+
+        var extension = Path.GetFileName(contentType);
+        var fileName = $"{account.Id}.{extension}";
 
         if (account.AvatarId != null)
         {
             await FileService.DeleteFile("avatars", account.AvatarId);
         }
+
+        var avatarId = await FileService.UploadFile(avatarData, "avatars", fileName);
+        var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
 
         account.AvatarId = avatarId;
         account.AvatarUrl = avatarUrl;
