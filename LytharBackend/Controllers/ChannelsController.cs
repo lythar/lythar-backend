@@ -126,6 +126,7 @@ public class ChannelsController : Controller
     {
         [MaxLength(2000)]
         public required string Content { get; set; }
+        public List<Guid> AttachmentIds { get; set; } = new();
     }
 
     public class SendMessageResponse
@@ -151,34 +152,7 @@ public class ChannelsController : Controller
             throw new AccountNotFoundException(token.AccountId.ToString());
         }
 
-        //if (messageForm.Files.Count > 5)
-        //{
-        //    throw new TooManyFilesException(5, messageForm.Files.Count);
-        //}
-
-        //var namespaceId = $"attachments/{channel.ChannelId}/{Guid.NewGuid()}";
-
-        //var attachments = new List<Attachment>();
-
-        //foreach (var file in messageForm.Files)
-        //{
-        //    if (file.Length > 100 * 1024 * 1024)
-        //    {
-        //        throw new FileSizeException(file.Length, 128 * 1024 * 1024);
-        //    }
-
-        //    var cdnId = await FileService.UploadFile(file.OpenReadStream(), namespaceId, file.FileName);
-        //    var cdnUrl = await FileService.GetFileUrl(namespaceId, cdnId);
-
-        //    var attachment = new Attachment
-        //    {
-        //        Name = file.FileName,
-        //        CdnNamespace = namespaceId,
-        //        CdnUrl = cdnUrl
-        //    };
-
-        //    attachments.Add(attachment);
-        //}
+        var attachments = await DatabaseContext.Attachments.Where(x => messageForm.AttachmentIds.Contains(x.Id)).ToListAsync();
 
         var message = new Message
         {
@@ -186,6 +160,7 @@ public class ChannelsController : Controller
             SentAt = DateTime.UtcNow,
             ChannelId = channelId,
             AuthorId = token.AccountId,
+            Attachments = attachments
         };
 
         var insertedMessage = DatabaseContext.Messages.Add(message);

@@ -32,6 +32,7 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.2" />
 		<PackageReference Include="System.DirectoryServices" Version="8.0.0" />
 		<PackageReference Include="System.DirectoryServices.Protocols" Version="8.0.0" />
 	</ItemGroup>
