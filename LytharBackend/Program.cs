@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using System.Text.Json.Serialization;
 
 public class Program
@@ -45,15 +46,18 @@ public class Program
             serverOptions.Limits.MaxRequestBodySize = 512 * 1024 * 1024;
         });
 
+        var app = builder.Build();
+
         var autoRunMigrations = builder.Configuration.GetValue<bool?>("DatabaseContext:AutoRunMigrations")
             ?? builder.Environment.IsDevelopment();
 
         if (autoRunMigrations)
         {
-            builder.Services.Configure<DatabaseContext>(x => x.Database.Migrate());
-        }
+            using var scope = app.Services.CreateScope();
 
-        var app = builder.Build();
+            var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+            db.Database.Migrate();
+        }
 
         app.UseExceptionHandler(options =>
         {
