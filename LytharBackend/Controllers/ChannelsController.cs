@@ -39,19 +39,9 @@ public class ChannelsController : Controller
         public List<int> Members { get; set; } = new();
     }
 
-    public class CreateChannelResponse
-    {
-        public required long ChannelId { get; set; }
-        public required string Name { get; set; }
-        public required string Description { get; set; }
-        public required bool IsDirectMessages { get; set; }
-        public required bool IsPublic { get; set; }
-        public required List<int> Members { get; set; }
-    }
-
     [HttpPost, Route("create")]
-    [SwaggerResponse(200, typeof(CreateChannelResponse))]
-    public async Task<CreateChannelResponse> CreateChannel([FromBody] CreateChannelForm createChannelForm)
+    [SwaggerResponse(200, typeof(ChannelResponse))]
+    public async Task<ChannelResponse> CreateChannel([FromBody] CreateChannelForm createChannelForm)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
         var user = await DatabaseContext.Users.Where(x => x.Id == session.AccountId).FirstOrDefaultAsync();
@@ -101,22 +91,14 @@ public class ChannelsController : Controller
         var instertedChannel = DatabaseContext.Channels.Add(channel);
         await DatabaseContext.SaveChangesAsync();
 
-        var response = new CreateChannelResponse
-        {
-            ChannelId = instertedChannel.Entity.ChannelId,
-            Name = instertedChannel.Entity.Name,
-            Description = instertedChannel.Entity.Description,
-            IsDirectMessages = instertedChannel.Entity.IsDirectMessages,
-            IsPublic = instertedChannel.Entity.IsPublic,
-            Members = instertedChannel.Entity.Members.Select(x => x.Id).ToList()
-        };
+        var response = ChannelResponse.FromDatabase(instertedChannel.Entity);
 
         await WebSocketClient.Manager.BroadcastToChannel(
             instertedChannel.Entity,
-            new WebSocketMessage<Channel>
+            new WebSocketMessage<ChannelResponse>
             {
                 Type = "NewChannel",
-                Data = instertedChannel.Entity
+                Data = response
             }
         );
 
@@ -490,7 +472,7 @@ public class ChannelsController : Controller
 
     [HttpPost, Route("{channelId}/icon")]
     [OpenApiBodyParameter(["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"])]
-    public async Task<Channel> UpdateIcon(long channelId)
+    public async Task<ChannelResponse> UpdateIcon(long channelId)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
         var channel = await DatabaseContext.Channels
@@ -533,12 +515,14 @@ public class ChannelsController : Controller
 
         await DatabaseContext.SaveChangesAsync();
 
-        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<Channel>
+        var channelResponse = ChannelResponse.FromDatabase(channel);
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<ChannelResponse>
         {
             Type = "ChannelUpdated",
-            Data = channel
+            Data = channelResponse
         });
 
-        return channel;
+        return channelResponse;
     }
 }
