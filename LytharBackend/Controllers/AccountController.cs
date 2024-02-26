@@ -3,7 +3,6 @@ using LytharBackend.Exceptons;
 using LytharBackend.Files;
 using LytharBackend.ImageGeneration;
 using LytharBackend.Ldap;
-using LytharBackend.Models;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;

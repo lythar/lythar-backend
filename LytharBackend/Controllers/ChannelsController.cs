@@ -122,6 +122,21 @@ public class ChannelsController : Controller
             Data = channel.ChannelId
         });
 
+        var messages = await DatabaseContext.Messages
+            .Include(x => x.Attachments)
+            .Where(x => x.ChannelId == channelId)
+            .ToListAsync();
+
+        foreach (var message in messages)
+        {
+            foreach (var attachment in message.Attachments)
+            {
+                await FileService.DeleteFile(attachment.CdnNamespace, attachment.Name);
+            }
+
+            DatabaseContext.Remove(message);
+        }
+
         DatabaseContext.Remove(channel);
 
         await DatabaseContext.SaveChangesAsync();
@@ -250,7 +265,10 @@ public class ChannelsController : Controller
         var token = await SessionService.VerifyRequest(HttpContext);
         var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
 
-        var message = await DatabaseContext.Messages.Where(x => x.ChannelId == channelId && x.MessageId == messageId).FirstOrDefaultAsync();
+        var message = await DatabaseContext.Messages
+            .Include(x => x.Attachments)
+            .Where(x => x.ChannelId == channelId && x.MessageId == messageId)
+            .FirstOrDefaultAsync();
 
         if (message == null)
         {
@@ -260,6 +278,11 @@ public class ChannelsController : Controller
         if (message.AuthorId != token.AccountId)
         {
             throw new ForbiddenException($"{token.AccountId} nie ma uprawnień do usunięcia wiadomości innego użytkownika.");
+        }
+
+        foreach (var attachment in message.Attachments)
+        {
+            await FileService.DeleteFile(attachment.CdnNamespace, attachment.Name);
         }
 
         DatabaseContext.Remove(message);
