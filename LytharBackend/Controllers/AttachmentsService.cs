@@ -28,6 +28,16 @@ public class AttachmentsController : Controller
         public Guid FileId { get; set; }
         public required string Name { get; set; }
         public required string CdnUrl { get; set; }
+
+        public static AttachmentResponse FromDatabase(Attachment attachment)
+        {
+            return new AttachmentResponse
+            {
+                FileId = attachment.Id,
+                Name = attachment.Name,
+                CdnUrl = attachment.CdnUrl
+            };
+        }
     }
 
     [HttpPut, Route("upload/{fileName}")]
@@ -60,11 +70,6 @@ public class AttachmentsController : Controller
 
         Logger.LogInformation("Uploaded file {} ({}MB) by {}", fileName, (float)length / 1000000, session.AccountId);
 
-        return new AttachmentResponse
-        {
-            FileId = insertedAttachment.Entity.Id,
-            Name = fileName,
-            CdnUrl = fileUrl
-        };
+        return AttachmentResponse.FromDatabase(insertedAttachment.Entity);
     }
 }

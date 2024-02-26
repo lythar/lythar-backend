@@ -1,15 +1,16 @@
 ﻿using Isopoh.Cryptography.Argon2;
 using LytharBackend.Exceptons;
 using LytharBackend.Files;
+using LytharBackend.ImageGeneration;
 using LytharBackend.Ldap;
+using LytharBackend.Models;
 using LytharBackend.Session;
+using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Text.Json.Serialization;
 
 namespace LytharBackend.Controllers;
@@ -243,12 +244,7 @@ public class AccountController : Controller
         long? length = HttpContext.Request.ContentLength;
         var avatarData = HttpContext.Request.Body;
 
-        if (length == null)
-        {
-            throw new FileSizeException(0, 1024 * 1024);
-        }
-
-        if (avatarData == null)
+        if (length == null || avatarData == null)
         {
             throw new FileSizeException(0, 1024 * 1024);
         }
@@ -263,45 +259,19 @@ public class AccountController : Controller
             await FileService.DeleteFile("avatars", account.AvatarId);
         }
 
-        try
-        {
-            using var image = await Image.LoadAsync(avatarData);
+        using var memoryStream = await IconCreator.Generate(avatarData, 512, 512);
 
-            if (image.Width != image.Height)
-            {
-                var min = Math.Min(image.Width, image.Height);
-                var x = (image.Width - min) / 2;
-                var y = (image.Height - min) / 2;
+        var fileName = $"{account.Id}.{Guid.NewGuid()}.webp";
 
-                image.Mutate(img => img.Crop(new Rectangle(x, y, min, min)));
-            }
+        var avatarId = await FileService.UploadFile(memoryStream, "avatars", fileName);
+        var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
 
-            if (image.Width > 512 || image.Height > 512)
-            {
-                image.Mutate(x => x.Resize(512, 512));
-            }
+        account.AvatarId = avatarId;
+        account.AvatarUrl = avatarUrl;
 
-            using var memoryStream = new MemoryStream();
-            await image.SaveAsWebpAsync(memoryStream);
+        await DatabaseContext.SaveChangesAsync();
 
-            var fileName = $"{account.Id}.{Guid.NewGuid()}.webp";
-
-            memoryStream.Seek(0, SeekOrigin.Begin);
-
-            var avatarId = await FileService.UploadFile(memoryStream, "avatars", fileName);
-            var avatarUrl = await FileService.GetFileUrl("avatars", avatarId);
-
-            account.AvatarId = avatarId;
-            account.AvatarUrl = avatarUrl;
-
-            await DatabaseContext.SaveChangesAsync();
-        }
-        catch (ImageFormatException)
-        {
-            throw new InvalidImageException();
-        }
-
-        return new UserAccountResponse
+        var updatedUser = new UserAccountResponse
         {
             Id = account.Id,
             Name = account.Name,
@@ -309,5 +279,13 @@ public class AccountController : Controller
             Email = account.Email,
             AvatarUrl = account.AvatarUrl
         };
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<UserAccountResponse>
+        {
+            Type = "UserUpdated",
+            Data = updatedUser
+        });
+
+        return updatedUser;
     }
 }

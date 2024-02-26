@@ -1,12 +1,18 @@
 ﻿using LytharBackend.Exceptons;
 using LytharBackend.Files;
+using LytharBackend.ImageGeneration;
 using LytharBackend.Models;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.Replication.PgOutput.Messages;
 using NSwag.Annotations;
+using SixLabors.ImageSharp;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Principal;
+using static LytharBackend.Controllers.AccountController;
+using static LytharBackend.Controllers.AttachmentsController;
 
 namespace LytharBackend.Controllers;
 
@@ -175,7 +181,7 @@ public class ChannelsController : Controller
                 Content = insertedMessage.Entity.Content,
                 ChannelId = insertedMessage.Entity.ChannelId,
                 SentAt = insertedMessage.Entity.SentAt,
-                Author = new AccountController.UserAccountResponse
+                Author = new UserAccountResponse
                 {
                     Id = user.Id,
                     Name = user.Name,
@@ -183,7 +189,7 @@ public class ChannelsController : Controller
                     Email = user.Email,
                     AvatarUrl = user.AvatarUrl
                 },
-                Attachments = insertedMessage.Entity.Attachments
+                Attachments = insertedMessage.Entity.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
             }
         });
     }
@@ -234,7 +240,7 @@ public class ChannelsController : Controller
                     Email = user.Email,
                     AvatarUrl = user.AvatarUrl
                 },
-                Attachments = message.Attachments
+                Attachments = message.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
             }
         });
     }
@@ -274,8 +280,8 @@ public class ChannelsController : Controller
         public required long ChannelId { get; set; }
         public required DateTime SentAt { get; set; }
         public DateTime? EditedAt { get; set; }
-        public required AccountController.UserAccountResponse Author { get; set; }
-        public required List<Attachment> Attachments { get; set; }
+        public required UserAccountResponse Author { get; set; }
+        public required List<AttachmentResponse> Attachments { get; set; }
     }
 
     public class ListMessagesQuery
@@ -308,7 +314,7 @@ public class ChannelsController : Controller
             ChannelId = x.ChannelId,
             SentAt = x.SentAt,
             EditedAt = x.EditedAt,
-            Author = new AccountController.UserAccountResponse
+            Author = new UserAccountResponse
             {
                 Id = x.Author.Id,
                 Name = x.Author.Name,
@@ -316,7 +322,58 @@ public class ChannelsController : Controller
                 Email = x.Author.Email,
                 AvatarUrl = x.Author.AvatarUrl
             },
-            Attachments = x.Attachments
+            Attachments = x.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
         });
+    }
+
+    [HttpPost, Route("{channelId}/icon")]
+    [OpenApiBodyParameter(["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"])]
+    public async Task<Channel> UpdateIcon(long channelId)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var channel = await DatabaseContext.Channels.Where(x => x.ChannelId == channelId).FirstOrDefaultAsync();
+
+        if (channel == null)
+        {
+            throw new ChannelNotFoundException(channelId.ToString());
+        }
+
+        long? length = HttpContext.Request.ContentLength;
+        var iconData = HttpContext.Request.Body;
+
+        if (length == null || iconData == null)
+        {
+            throw new FileSizeException(0, 1024 * 1024);
+        }
+
+        if (length > 32 * 1000 * 1024)
+        {
+            throw new FileSizeException((long)length, 1000 * 1024);
+        }
+
+        if (channel.IconId != null)
+        {
+            await FileService.DeleteFile("channel-icons", channel.IconId);
+        }
+
+        using var memoryStream = await IconCreator.Generate(iconData, 512, 512);
+
+        var fileName = $"{channel.ChannelId}.{Guid.NewGuid()}.webp";
+
+        var iconId = await FileService.UploadFile(memoryStream, "channel-icons", fileName);
+        var iconUrl = await FileService.GetFileUrl("channel-icons", iconId);
+
+        channel.IconId = iconId;
+        channel.IconUrl = iconUrl;
+
+        await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.Broadcast(new WebSocketMessage<Channel>
+        {
+            Type = "ChannelUpdated",
+            Data = channel
+        });
+
+        return channel;
     }
 }
