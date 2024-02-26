@@ -122,20 +122,8 @@ public class ChannelsController : Controller
             Data = channel.ChannelId
         });
 
-        var messages = await DatabaseContext.Messages.Where(x => x.ChannelId == channelId).ToListAsync();
+        DatabaseContext.Remove(channel);
 
-        foreach (var message in messages)
-        {
-            foreach (var attachment in message.Attachments)
-            {
-                await FileService.DeleteFile(attachment.CdnNamespace, attachment.Name);
-                DatabaseContext.Attachments.Remove(attachment);
-            }
-
-            DatabaseContext.Messages.Remove(message);
-        }
-
-        DatabaseContext.Channels.Remove(channel);
         await DatabaseContext.SaveChangesAsync();
     }
 
@@ -274,13 +262,8 @@ public class ChannelsController : Controller
             throw new ForbiddenException($"{token.AccountId} nie ma uprawnień do usunięcia wiadomości innego użytkownika.");
         }
 
-        foreach (var attachment in message.Attachments)
-        {
-            await FileService.DeleteFile(attachment.CdnNamespace, attachment.Name);
-            DatabaseContext.Attachments.Remove(attachment);
-        }
+        DatabaseContext.Remove(message);
 
-        DatabaseContext.Messages.Remove(message);
         await DatabaseContext.SaveChangesAsync();
 
         await WebSocketClient.Manager.Broadcast(new WebSocketMessage<long>
