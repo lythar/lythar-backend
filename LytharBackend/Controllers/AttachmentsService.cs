@@ -25,7 +25,7 @@ public class AttachmentsController : Controller
 
     public class AttachmentResponse
     {
-        public Guid FileId { get; set; }
+        public required Guid FileId { get; set; }
         public required string Name { get; set; }
         public required string CdnUrl { get; set; }
 

@@ -6,11 +6,9 @@ using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql.Replication.PgOutput.Messages;
 using NSwag.Annotations;
 using SixLabors.ImageSharp;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Principal;
 using static LytharBackend.Controllers.AccountController;
 using static LytharBackend.Controllers.AttachmentsController;
 
