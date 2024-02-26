@@ -83,6 +83,11 @@ public class ChannelsController : Controller
         }
         else if (createChannelForm.IsDirectMessages)
         {
+            if (createChannelForm.IsPublic)
+            {
+                throw new DMChannelNotPrivateException();
+            }
+
             if (createChannelForm.Members.Count != 2 || !createChannelForm.Members.Contains(session.AccountId))
             {
                 throw new InvalidMembersException();
