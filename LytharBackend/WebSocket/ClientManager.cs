@@ -28,9 +28,15 @@ public class WebSocketClientManager
     {
         foreach (var socket in Sockets.Values)
         {
-            if (filter(socket))
+            try
             {
-                await socket.Send(message);
+                if (filter(socket))
+                {
+                    await socket.Send(message);
+                }
+            }
+            catch (Exception)
+            { 
             }
         }
     }
@@ -39,7 +45,13 @@ public class WebSocketClientManager
     {
         foreach (var socket in Sockets.Values)
         {
-            await socket.Send(message);
+            try
+            {
+                await socket.Send(message);
+            }
+            catch (Exception)
+            {
+            }
         }
     }
 
