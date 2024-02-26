@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using LytharBackend.Models;
+using System.Collections.Concurrent;
 
 namespace LytharBackend.WebSocket;
 
@@ -22,6 +23,21 @@ public class WebSocketClientManager
     public ICollection<WebSocketClient> GetAllSockets()
     {
         return Sockets.Values;
+    }
+
+    public async Task BroadcastToChannel<T>(Channel channel, T message)
+    {
+        if (channel.IsPublic)
+        {
+            await Broadcast(message);
+        }
+        else
+        {
+            await BroadcastFilter(
+                x => channel.Members.Exists(u => u.Id == x.Session.AccountId),
+                message
+            );
+        }
     }
 
     public async Task BroadcastFilter<T>(Func<WebSocketClient, bool> filter, T message)

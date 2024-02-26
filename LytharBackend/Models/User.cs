@@ -16,6 +16,8 @@ public class User
     public string? AvatarId { get; set; }
     public string? AvatarUrl { get; set; }
 
+    public List<Channel> Channels { get; set; } = null!;
+
 
     public static User FromLdap(SearchResultAttributeCollection attr)
     {

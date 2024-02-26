@@ -40,5 +40,14 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(e => e.AuthorId)
             .IsRequired();
+
+        // Many-to-many relationship between Users and Channels
+        builder.Entity<User>()
+            .HasMany(e => e.Channels)
+            .WithMany(u => u.Members);
+
+        builder.Entity<Channel>()
+            .HasOne(e => e.Creator)
+            .WithMany();
     }
 }

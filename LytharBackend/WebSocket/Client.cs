@@ -10,7 +10,7 @@ public class WebSocketClient
     public static WebSocketClientManager Manager { get; } = new();
 
     public UserStatus Status { get; set; } = new();
-    private readonly SessionData Session;
+    public readonly SessionData Session;
     private HttpContext HttpContext;
     private WebSocket Socket;
     private Guid SessionId;
