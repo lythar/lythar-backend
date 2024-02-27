@@ -45,7 +45,12 @@ public class ChannelsController : Controller
     public async Task<ChannelResponse> CreateChannel([FromBody] CreateChannelForm createChannelForm)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.GetAdminById(session.AccountId);
+        var user = await DatabaseContext.GetUserById(session.AccountId);
+
+        if (!createChannelForm.IsDirectMessages && !user.IsAdmin)
+        {
+            throw new ForbiddenException("Nie możesz tworzyć kanał publicznych.");
+        }
 
         var channel = new Channel
         {
