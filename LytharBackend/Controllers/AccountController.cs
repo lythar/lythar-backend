@@ -3,6 +3,7 @@ using LytharBackend.Exceptons;
 using LytharBackend.Files;
 using LytharBackend.ImageGeneration;
 using LytharBackend.Ldap;
+using LytharBackend.Models;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
 using SixLabors.ImageSharp;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Principal;
 using System.Text.Json.Serialization;
 
 namespace LytharBackend.Controllers;
@@ -73,7 +75,10 @@ public class AccountController : Controller
                 return new LoginResponse { Status = ResponseStatus.SetNewPassword };
             }
 
-            var newUser = Models.User.FromLdap(loginAttempt.Attributes);
+            var newUser = Models.User.FromLdap(
+                loginAttempt.Attributes,
+                loginAttempt.DistinguishedName.Contains($",{LdapService.AdminGroup},{LdapService.SearchDn}")
+            );
 
             newUser.Password = Argon2.Hash(loginForm.NewPassword);
 
@@ -124,6 +129,20 @@ public class AccountController : Controller
         public string? LastName { get; set; }
         public string? Email { get; set; }
         public string? AvatarUrl { get; set; }
+        public required bool IsAdmin { get; set; }
+
+        public static UserAccountResponse FromDatabase(Models.User user)
+        {
+            return new UserAccountResponse
+            {
+                Id = user.Id,
+                Name = user.Name,
+                LastName = user.LastName,
+                Email = user.Email,
+                AvatarUrl = user.AvatarUrl,
+                IsAdmin = user.IsAdmin
+            };
+        }
     }
 
     [HttpGet, Route("account")]
@@ -131,21 +150,9 @@ public class AccountController : Controller
     public async Task<UserAccountResponse> GetAccount()
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
+        var account = await DatabaseContext.GetUserById(token.AccountId);
 
-        if (account == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
-
-        return new UserAccountResponse
-        {
-            Id = account.Id,
-            Name = account.Name,
-            LastName = account.LastName,
-            Email = account.Email,
-            AvatarUrl = account.AvatarUrl
-        };
+        return UserAccountResponse.FromDatabase(account);
     }
 
     [HttpGet, Route("accounts")]
@@ -156,14 +163,7 @@ public class AccountController : Controller
 
         var accounts = await DatabaseContext.Users.Where(x => accountIds.Contains(x.Id)).ToListAsync();
 
-        return accounts.ConvertAll(x => new UserAccountResponse
-        {
-            Id = x.Id,
-            Name = x.Name,
-            LastName = x.LastName,
-            Email = x.Email,
-            AvatarUrl = x.AvatarUrl
-        });
+        return accounts.ConvertAll(UserAccountResponse.FromDatabase);
     }
 
     public class ListAccountsQuery
@@ -204,12 +204,7 @@ public class AccountController : Controller
     public async Task<UserAccountResponse> UpdateAccount([FromBody] UpdateAccountForm updateAccount)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
-
-        if (account == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
+        var account = await DatabaseContext.GetUserById(token.AccountId);
 
         if (updateAccount.FirstName != null) account.Name = updateAccount.FirstName.Trim();
         if (updateAccount.LastName != null) account.LastName = updateAccount.LastName.Trim();
@@ -217,14 +212,7 @@ public class AccountController : Controller
 
         await DatabaseContext.SaveChangesAsync();
 
-        return new UserAccountResponse
-        {
-            Id = account.Id,
-            Name = account.Name,
-            LastName = account.LastName,
-            Email = account.Email,
-            AvatarUrl = account.AvatarUrl
-        };
+        return UserAccountResponse.FromDatabase(account);
     }
 
     [HttpPost, Route("account/avatar")]
@@ -233,12 +221,7 @@ public class AccountController : Controller
     public async Task<UserAccountResponse> UpdateAvatar()
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var account = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
-
-        if (account == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
+        var account = await DatabaseContext.GetUserById(token.AccountId);
 
         long? length = HttpContext.Request.ContentLength;
         var avatarData = HttpContext.Request.Body;
@@ -270,14 +253,7 @@ public class AccountController : Controller
 
         await DatabaseContext.SaveChangesAsync();
 
-        var updatedUser = new UserAccountResponse
-        {
-            Id = account.Id,
-            Name = account.Name,
-            LastName = account.LastName,
-            Email = account.Email,
-            AvatarUrl = account.AvatarUrl
-        };
+        var updatedUser = UserAccountResponse.FromDatabase(account);
 
         await WebSocketClient.Manager.Broadcast(new WebSocketMessage<UserAccountResponse>
         {

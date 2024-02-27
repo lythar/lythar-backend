@@ -3,6 +3,7 @@ namespace LytharBackend;
 using LytharBackend.Exceptons;
 using LytharBackend.Files;
 using LytharBackend.Ldap;
+using LytharBackend.Models;
 using LytharBackend.Session;
 using LytharBackend.WebSocket;
 using Microsoft.AspNetCore.Builder;
@@ -115,16 +116,18 @@ public class Program
             if (context.WebSockets.IsWebSocketRequest)
             {
                 var sessionService = context.RequestServices.GetService<ISessionService>();
+                var databaseContext = context.RequestServices.GetService<DatabaseContext>();
 
-                if (sessionService == null)
+                if (sessionService == null || databaseContext == null)
                 {
                     throw new InternalServerException();
                 }
 
                 var token = await sessionService.VerifyRequest(context);
+                var user = await databaseContext.GetUserById(token.AccountId);
 
                 using var webSocket = await context.WebSockets.AcceptWebSocketAsync();
-                var client = new WebSocketClient(context, webSocket, token);
+                var client = new WebSocketClient(context, webSocket, token, user.IsAdmin);
 
                 await client.Listen();
             }

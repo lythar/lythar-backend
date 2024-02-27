@@ -31,6 +31,9 @@ public class LdapService
     private LdapConnection Connection;
     private LdapDirectoryIdentifier RootEntry;
 
+    public string AdminGroup => LdapConfig.AdminGroup;
+    public string SearchDn => LdapConfig.SearchDn;
+
     public LdapService(ILogger<LdapService> logger, IConfiguration configuration)
     {
         Logger = logger;

@@ -11,15 +11,17 @@ public class WebSocketClient
 
     public UserStatus Status { get; set; } = new();
     public readonly SessionData Session;
+    public readonly bool IsAdmin;
     private HttpContext HttpContext;
     private WebSocket Socket;
     private Guid SessionId;
 
-    public WebSocketClient(HttpContext httpContext, WebSocket socket, SessionData sessionData)
+    public WebSocketClient(HttpContext httpContext, WebSocket socket, SessionData sessionData, bool isAdmin)
     {
         HttpContext = httpContext;
         Socket = socket;
         Session = sessionData;
+        IsAdmin = isAdmin;
     }
 
     public async Task Listen()

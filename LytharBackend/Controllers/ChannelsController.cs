@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using NSwag.Annotations;
 using SixLabors.ImageSharp;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Principal;
 using static LytharBackend.Controllers.AccountController;
 using static LytharBackend.Controllers.AttachmentsController;
 
@@ -44,12 +45,7 @@ public class ChannelsController : Controller
     public async Task<ChannelResponse> CreateChannel([FromBody] CreateChannelForm createChannelForm)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == session.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(session.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetAdminById(session.AccountId);
 
         var channel = new Channel
         {
@@ -125,14 +121,7 @@ public class ChannelsController : Controller
                 Name = channel.Name,
                 Description = channel.Description,
                 CreatedAt = channel.CreatedAt,
-                Creator = channel.Creator == null ? null : new UserAccountResponse
-                {
-                    Id = channel.Creator.Id,
-                    Name = channel.Creator.Name,
-                    LastName = channel.Creator.LastName,
-                    Email = channel.Creator.Email,
-                    AvatarUrl = channel.Creator.AvatarUrl
-                },
+                Creator = channel.Creator == null ? null : UserAccountResponse.FromDatabase(channel.Creator),
                 Members = channel.Members.Select(x => x.Id).ToList(),
                 IsPublic = channel.IsPublic,
                 IsDirectMessages = channel.IsDirectMessages,
@@ -146,17 +135,12 @@ public class ChannelsController : Controller
     public async Task<IEnumerable<ChannelResponse>> ListChannels()
     {
         var session = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == session.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(session.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(session.AccountId);
 
         var channels = await DatabaseContext.Channels
             .Include(x => x.Members)
             .Include(x => x.Creator)
-            .Where(x => x.IsPublic || x.Members.Contains(user))
+            .WhereHasAccess(user)
             .ToListAsync();
 
         return channels.ConvertAll(ChannelResponse.FromDatabase);
@@ -167,23 +151,14 @@ public class ChannelsController : Controller
     public async Task<ChannelResponse> GetChannel([FromRoute] long channelId)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == session.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(session.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(session.AccountId);
 
         var channel = await DatabaseContext.Channels
             .Include(x => x.Members)
             .Include(x => x.Creator)
-            .Where(x => x.ChannelId == channelId && (x.IsPublic || x.Members.Contains(user)))
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .WhereHasAccess(user)
+            .Where(x => x.ChannelId == channelId)
+            .FirstOrThrowAsync(channelId);
 
         return ChannelResponse.FromDatabase(channel);
     }
@@ -192,15 +167,12 @@ public class ChannelsController : Controller
     public async Task DeleteChannel([FromRoute] long channelId)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.GetUserById(session.AccountId);
 
         var channel = await DatabaseContext.Channels
-            .Where(x => x.ChannelId == channelId && x.Creator != null && x.Creator.Id == session.AccountId)
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .Where(x => x.ChannelId == channelId)
+            .WhereHasAdminAccess(user)
+            .FirstOrThrowAsync(channelId);
 
         await WebSocketClient.Manager.BroadcastToChannel(channel, new WebSocketMessage<long>
         {
@@ -244,21 +216,11 @@ public class ChannelsController : Controller
     public async Task SendMessage([FromRoute] long channelId, [FromBody] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(token.AccountId);
 
         var channel = await DatabaseContext.Channels
-            .Where(x => x.ChannelId == channelId && (x.IsPublic || x.Members.Contains(user)))
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .WhereHasAccess(user)
+            .FirstOrThrowAsync(channelId);
 
         var attachments = await DatabaseContext.Attachments.Where(x => messageForm.AttachmentIds.Contains(x.Id)).ToListAsync();
 
@@ -283,14 +245,7 @@ public class ChannelsController : Controller
                 Content = insertedMessage.Entity.Content,
                 ChannelId = insertedMessage.Entity.ChannelId,
                 SentAt = insertedMessage.Entity.SentAt,
-                Author = new UserAccountResponse
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    AvatarUrl = user.AvatarUrl
-                },
+                Author = UserAccountResponse.FromDatabase(insertedMessage.Entity.Author),
                 Attachments = insertedMessage.Entity.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
             }
         });
@@ -300,21 +255,12 @@ public class ChannelsController : Controller
     public async Task EditMessage([FromRoute] long channelId, [FromRoute] long messageId, [FromBody] SendMessageForm messageForm)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(token.AccountId);
 
         var channel = await DatabaseContext.Channels
-            .Where(x => x.ChannelId == channelId && (x.IsPublic || x.Members.Contains(user)))
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .Where(x => x.ChannelId == channelId)
+            .WhereHasAdminAccess(user)
+            .FirstOrThrowAsync(channelId);
 
         var message = await DatabaseContext.Messages
             .Include(x => x.Attachments)
@@ -346,14 +292,7 @@ public class ChannelsController : Controller
                 ChannelId = message.ChannelId,
                 SentAt = message.SentAt,
                 EditedAt = message.EditedAt,
-                Author = new AccountController.UserAccountResponse
-                {
-                    Id = user.Id,
-                    Name = user.Name,
-                    LastName = user.LastName,
-                    Email = user.Email,
-                    AvatarUrl = user.AvatarUrl
-                },
+                Author = UserAccountResponse.FromDatabase(message.Author),
                 Attachments = message.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
             }
         });
@@ -363,21 +302,11 @@ public class ChannelsController : Controller
     public async Task DeleteMessage([FromRoute] long channelId, [FromRoute] long messageId)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == token.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(token.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(token.AccountId);
 
         var channel = await DatabaseContext.Channels
-            .Where(x => x.ChannelId == channelId && (x.IsPublic || x.Members.Contains(user)))
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .WhereHasAccess(user)
+            .FirstOrThrowAsync(channelId);
 
         var message = await DatabaseContext.Messages
             .Include(x => x.Attachments)
@@ -434,17 +363,12 @@ public class ChannelsController : Controller
     public async Task<IEnumerable<ListMessagesResponse>> ListMessages([FromRoute] long channelId, [FromQuery] ListMessagesQuery query)
     {
         var session = await SessionService.VerifyRequest(HttpContext);
-        var user = await DatabaseContext.Users.Where(x => x.Id == session.AccountId).FirstOrDefaultAsync();
-
-        if (user == null)
-        {
-            throw new AccountNotFoundException(session.AccountId.ToString());
-        }
+        var user = await DatabaseContext.GetUserById(session.AccountId);
 
         var messages = await DatabaseContext.Messages
             .Include(x => x.Author)
             .Include(x => x.Attachments)
-            .Where(x => x.ChannelId == channelId && (x.Channel.IsPublic || x.Channel.Members.Contains(user)))
+            .Where(x => x.ChannelId == channelId && (user.IsAdmin || x.Channel.IsPublic || x.Channel.Members.Contains(user)))
             .OrderByDescending(x => x.SentAt)
             .Where(x => query.Before == null || x.MessageId < query.Before)
             .Where(x => query.After == null || x.MessageId > query.After)
@@ -458,14 +382,7 @@ public class ChannelsController : Controller
             ChannelId = x.ChannelId,
             SentAt = x.SentAt,
             EditedAt = x.EditedAt,
-            Author = new UserAccountResponse
-            {
-                Id = x.Author.Id,
-                Name = x.Author.Name,
-                LastName = x.Author.LastName,
-                Email = x.Author.Email,
-                AvatarUrl = x.Author.AvatarUrl
-            },
+            Author = UserAccountResponse.FromDatabase(x.Author),
             Attachments = x.Attachments.Select(AttachmentResponse.FromDatabase).ToList()
         });
     }
@@ -475,15 +392,12 @@ public class ChannelsController : Controller
     public async Task<ChannelResponse> UpdateIcon(long channelId)
     {
         var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.GetUserById(token.AccountId);
         var channel = await DatabaseContext.Channels
             .Include(x => x.Creator)
-            .Where(x => x.ChannelId == channelId && x.Creator != null && x.Creator.Id == token.AccountId)
-            .FirstOrDefaultAsync();
-
-        if (channel == null)
-        {
-            throw new ChannelNotFoundException(channelId.ToString());
-        }
+            .Where(x => x.ChannelId == channelId)
+            .WhereHasAdminAccess(user)
+            .FirstOrThrowAsync(channelId);
 
         long? length = HttpContext.Request.ContentLength;
         var iconData = HttpContext.Request.Body;
@@ -524,5 +438,66 @@ public class ChannelsController : Controller
         });
 
         return channelResponse;
+    }
+
+    public class AddMembersForm
+    {
+        public required List<int> Members { get; set; }
+    }
+
+    [HttpPost, Route("{channelId}/members")]
+    public async Task AddMembers([FromRoute] long channelId, [FromBody] AddMembersForm addMembersForm)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.GetUserById(token.AccountId);
+        var channel = await DatabaseContext.Channels
+            .Include(x => x.Creator)
+            .Where(x => x.ChannelId == channelId)
+            .WhereHasAdminAccess(user)
+            .FirstOrThrowAsync(channelId);
+
+        var members = await DatabaseContext.Users.Where(x => addMembersForm.Members.Contains(x.Id)).ToListAsync();
+
+        if (members.Count == 0 || members.Count != addMembersForm.Members.Count)
+        {
+            throw new InvalidMembersException();
+        }
+
+        channel.Members.AddRange(members);
+
+        await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.BroadcastToChannel(channel, new WebSocketMessage<ChannelResponse>
+        {
+            Type = "ChannelUpdated",
+            Data = ChannelResponse.FromDatabase(channel)
+        });
+    }
+
+    [HttpDelete, Route("{channelId}/members/{memberId}")]
+    public async Task RemoveMember([FromRoute] long channelId, [FromRoute] int memberId)
+    {
+        var token = await SessionService.VerifyRequest(HttpContext);
+        var user = await DatabaseContext.GetUserById(token.AccountId);
+        var channel = await DatabaseContext.Channels
+            .Include(x => x.Creator)
+            .Where(x => x.ChannelId == channelId)
+            .WhereHasAdminAccess(user)
+            .FirstOrThrowAsync(channelId);
+
+        var member = await DatabaseContext.GetUserById(memberId);
+
+        if (channel.Members.Contains(member))
+        {
+            channel.Members.Remove(member);
+        }
+
+        await DatabaseContext.SaveChangesAsync();
+
+        await WebSocketClient.Manager.BroadcastToChannel(channel, new WebSocketMessage<ChannelResponse>
+        {
+            Type = "ChannelUpdated",
+            Data = ChannelResponse.FromDatabase(channel)
+        });
     }
 }

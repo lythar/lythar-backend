@@ -34,7 +34,7 @@ public class WebSocketClientManager
         else
         {
             await BroadcastFilter(
-                x => channel.Members.Exists(u => u.Id == x.Session.AccountId),
+                x => x.IsAdmin || channel.Members.Exists(u => u.Id == x.Session.AccountId),
                 message
             );
         }
