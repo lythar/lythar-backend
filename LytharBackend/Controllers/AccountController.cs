@@ -96,6 +96,11 @@ public class AccountController : Controller
             throw new InvalidLoginException();
         }
 
+        if (!LdapService.UserExists(user.Login))
+        {
+            throw new InvalidLoginException();
+        }
+
         var token = await SessionService.CreateSession(new CreateSessionOptions
         {
             AccountId = user.Id.ToString(),

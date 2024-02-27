@@ -89,6 +89,16 @@ public class LdapService
         return (SearchResponse)Connection.SendRequest(request);
     }
 
+    public bool UserExists(string login)
+    {
+        if (LdapConfig.LoginSync)
+        {
+            return Find(string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)))?.Entries.Count > 0;
+        }
+
+        return true;
+    }
+
     public SearchResultEntry? ValidateLogin(string login, string password)
     {
         var response = Find(string.Format(LdapConfig.SearchFilter, LdapEncoder.FilterEncode(login)));

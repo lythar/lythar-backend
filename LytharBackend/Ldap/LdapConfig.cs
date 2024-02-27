@@ -11,5 +11,6 @@ public class LdapConfig
     public string AdminGroup { get; set; } = "ou=admin";
     public string SearchDn { get; set; } = "dc=lythar,dc=org";
     public string SearchFilter { get; set; } = "(uid={0})";
+    public bool LoginSync { get; set; } = false;
     public int Timeout { get; set; } = 10;
 }

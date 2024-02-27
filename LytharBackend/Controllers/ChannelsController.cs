@@ -461,6 +461,11 @@ public class ChannelsController : Controller
             .WhereHasAdminAccess(user)
             .FirstOrThrowAsync(channelId);
 
+        if (channel.IsDirectMessages)
+        {
+            throw new ForbiddenException("Nie możesz dodawać więcej członków do prywatnych wiadomości.");
+        }
+
         var members = await DatabaseContext.Users.Where(x => addMembersForm.Members.Contains(x.Id)).ToListAsync();
 
         if (members.Count == 0 || members.Count != addMembersForm.Members.Count)
