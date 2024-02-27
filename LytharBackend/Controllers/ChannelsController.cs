@@ -244,7 +244,7 @@ public class ChannelsController : Controller
 
         var message = new Message
         {
-            Content = messageForm.Content.Trim(),
+            Content = Crypt(messageForm.Content).Trim(),
             SentAt = DateTime.UtcNow,
             ChannelId = channelId,
             AuthorId = token.AccountId,
