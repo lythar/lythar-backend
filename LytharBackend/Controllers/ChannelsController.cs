@@ -217,6 +217,19 @@ public class ChannelsController : Controller
         public required long MessageId { get; set; }
     }
 
+    static string Crypt(string encrypted)
+    {
+        string decrypted = "";
+
+        for (int i = 0; i < encrypted.Length; i++)
+        {
+            int decryptedCharCode = encrypted[i] ^ 20;
+            decrypted += (char)decryptedCharCode;
+        }
+
+        return decrypted;
+    }
+
     [HttpPost, Route("{channelId}/messages")]
     public async Task SendMessage([FromRoute] long channelId, [FromBody] SendMessageForm messageForm)
     {
@@ -502,6 +515,15 @@ public class ChannelsController : Controller
         if (channel.Members.Contains(member))
         {
             channel.Members.Remove(member);
+
+            await WebSocketClient.Manager.BroadcastFilter(
+                x => x.Session.AccountId == member.Id,
+                new WebSocketMessage<long>
+                {
+                    Type = "ChannelDeleted",
+                    Data = channel.ChannelId
+                }
+            );
         }
 
         await DatabaseContext.SaveChangesAsync();
