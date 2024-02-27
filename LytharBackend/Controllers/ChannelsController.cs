@@ -457,6 +457,7 @@ public class ChannelsController : Controller
         var user = await DatabaseContext.GetUserById(token.AccountId);
         var channel = await DatabaseContext.Channels
             .Include(x => x.Creator)
+            .Include(x => x.Members)
             .Where(x => x.ChannelId == channelId)
             .WhereHasAdminAccess(user)
             .FirstOrThrowAsync(channelId);
@@ -491,6 +492,7 @@ public class ChannelsController : Controller
         var user = await DatabaseContext.GetUserById(token.AccountId);
         var channel = await DatabaseContext.Channels
             .Include(x => x.Creator)
+            .Include(x => x.Members)
             .Where(x => x.ChannelId == channelId)
             .WhereHasAdminAccess(user)
             .FirstOrThrowAsync(channelId);
